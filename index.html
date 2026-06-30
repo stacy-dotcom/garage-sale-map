@@ -9,6 +9,11 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
+    :root {
+      --brand: #2563eb;
+      --bg: #f8fafc;
+    }
+
     body {
       margin: 0;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
@@ -16,7 +21,7 @@
       height: 100vh;
     }
 
-    /* LEFT PANEL (ZILLOW STYLE) */
+    /* SIDEBAR */
     #sidebar {
       width: 360px;
       background: white;
@@ -25,12 +30,32 @@
       flex-direction: column;
     }
 
+    #header {
+      padding: 14px;
+      border-bottom: 1px solid #eee;
+    }
+
+    #title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    #subtitle {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+
     #search {
       padding: 12px;
       border: none;
       border-bottom: 1px solid #ddd;
       font-size: 14px;
       outline: none;
+    }
+
+    #search:focus {
+      background: #eff6ff;
     }
 
     #results {
@@ -59,14 +84,21 @@
       margin-top: 4px;
     }
 
-    /* MAP SIDE */
-    #map {
-      flex: 1;
+    .highlight {
+      border-left: 4px solid var(--brand);
+      background: #eff6ff;
     }
 
-    .highlight {
-      border-left: 4px solid #e11d48;
-      background: #fff5f5;
+    #footer {
+      padding: 10px;
+      font-size: 11px;
+      color: #888;
+      border-top: 1px solid #eee;
+    }
+
+    /* MAP */
+    #map {
+      flex: 1;
     }
   </style>
 </head>
@@ -75,16 +107,18 @@
 
 <div id="sidebar">
 
-  <div style="padding:14px; border-bottom:1px solid #ddd;">
-    <div style="font-size:18px; font-weight:700;">
-      Northgate Neighborhood Garage Sale Map
-    </div>
-    <div style="font-size:12px; color:#666; margin-top:4px;">
-      35th Annual Torrey Team Garage Sale, DRE#01433553 • 2026
-    </div>
+  <div id="header">
+    <div id="title">Northgate Neighborhood Garage Sale Map</div>
+    <div id="subtitle">The Torrey Team • In Honor of Pete Torrey • 2026</div>
   </div>
 
-  <input id="search" placeholder="Search items (tools, furniture, books...)" />
+  <input id="search" placeholder="Search items (tools, furniture, toys...)" />
+  <div id="results"></div>
+
+  <div id="footer">
+    Powered by The Torrey Team DRE#01433553 • Leaflet + Google Sheets
+  </div>
+
 </div>
 
 <div id="map"></div>
@@ -105,15 +139,56 @@ let allData = [];
 let markers = [];
 let markerMap = new Map();
 
-// CLEAR MARKERS
+// CLEAR
 function clearMarkers() {
   markers.forEach(m => map.removeLayer(m));
   markers = [];
   markerMap.clear();
 }
 
-// CREATE MARKER
+// -----------------------------
+// SAFE CSV PARSER (FIXED)
+// -----------------------------
+function parseCSV(csv) {
+  const lines = csv.trim().split("\n");
+  const headers = lines[0].split(",").map(h => h.replace(/"/g, "").trim());
+
+  let results = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+
+    let values = [];
+    let current = "";
+    let insideQuotes = false;
+
+    for (let char of lines[i]) {
+      if (char === '"') insideQuotes = !insideQuotes;
+      else if (char === "," && !insideQuotes) {
+        values.push(current);
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    values.push(current);
+
+    let obj = {};
+    headers.forEach((h, idx) => {
+      obj[h] = (values[idx] || "").replace(/"/g, "").trim();
+    });
+
+    results.push(obj);
+  }
+
+  return results;
+}
+
+// -----------------------------
+// MARKER CREATION (FIXED + BRANDED POPUP)
+// -----------------------------
 function createMarker(row, index) {
+
   let lat = parseFloat(row.Latitude);
   let lng = parseFloat(row.Longitude);
 
@@ -121,41 +196,44 @@ function createMarker(row, index) {
 
   let marker = L.marker([lat, lng]).addTo(map);
 
- let details = "";
+  // ONLY show item fields
+  let details = "";
 
-const excludeKeys = [
-  "Address",
-  "Latitude",
-  "Longitude",
-  "Email",
-  "Phone Number",
-  "Timestamp",
-  "Contact"
-];
+  const exclude = [
+    "Address",
+    "Latitude",
+    "Longitude",
+    "Email",
+    "Phone Number",
+    "Timestamp",
+    "Contact"
+  ];
 
-for (let key in row) {
-  if (!excludeKeys.includes(key) && row[key]) {
-    details += `<div><b>${key}:</b> ${row[key]}</div>`;
+  for (let key in row) {
+    if (!exclude.includes(key) && row[key]) {
+      details += `<div><b>${key}:</b> ${row[key]}</div>`;
+    }
   }
-}
 
-let popup = `
-  <div style="font-size:14px; max-width:260px;">
+  let popup = `
+    <div style="font-size:14px; max-width:260px;">
 
-    <b>${row.Address || "No address"}</b>
+      <b>${row.Address || "No address"}</b>
 
-    <hr>
+      <hr>
 
-    ${details || "<i>No item details listed</i>"}
+      ${details || "<i>No items listed</i>"}
 
-    <hr>
+      <hr>
 
-    <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">
-      🧭 Directions
-    </a>
+      <a style="color:#2563eb; font-weight:600;"
+         href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}"
+         target="_blank">
+        🧭 Get Directions
+      </a>
 
-  </div>
-`;
+    </div>
+  `;
 
   marker.bindPopup(popup);
 
@@ -165,7 +243,9 @@ let popup = `
   return marker;
 }
 
+// -----------------------------
 // SEARCH
+// -----------------------------
 function searchData(term) {
   if (!term) return allData;
 
@@ -178,7 +258,9 @@ function searchData(term) {
   );
 }
 
-// RENDER LIST + MAP (ZILLOW CORE)
+// -----------------------------
+// RENDER
+// -----------------------------
 function render(term = "") {
 
   let filtered = searchData(term);
@@ -214,46 +296,11 @@ function render(term = "") {
   });
 }
 
-// PARSE CSV
-function parseCSV(csv) {
-  const lines = csv.split("\n");
-  const headers = lines[0].split(",").map(h => h.trim());
-
-  let results = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    let line = lines[i];
-    if (!line.trim()) continue;
-
-    let values = [];
-    let current = "";
-    let insideQuotes = false;
-
-    for (let char of line) {
-      if (char === '"') insideQuotes = !insideQuotes;
-      else if (char === "," && !insideQuotes) {
-        values.push(current);
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-    values.push(current);
-
-    let obj = {};
-    headers.forEach((h, i) => {
-      obj[h] = (values[i] || "").replace(/"/g, "").trim();
-    });
-
-    results.push(obj);
-  }
-
-  return results;
-}
-
+// -----------------------------
 // LOAD DATA
+// -----------------------------
 async function loadData() {
-  let res = await fetch(SHEET_URL + "&cache=" + Date.now());
+  let res = await fetch(SHEET_URL + "&t=" + Date.now());
   let csv = await res.text();
 
   allData = parseCSV(csv);
@@ -271,7 +318,7 @@ document.getElementById("search").addEventListener("input", (e) => {
 // INIT
 loadData();
 
-// AUTO REFRESH (Google Form updates)
+// AUTO REFRESH
 setInterval(loadData, 30000);
 
 </script>
