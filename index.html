@@ -114,15 +114,18 @@ function createMarker(row, index) {
 
  let details = "";
 
+const excludeKeys = [
+  "Address",
+  "Latitude",
+  "Longitude",
+  "Email",
+  "Phone Number",
+  "Timestamp",
+  "Contact"
+];
+
 for (let key in row) {
-  if (
-    key !== "Address" &&
-    key !== "Latitude" &&
-    key !== "Longitude" &&
-    key !== "Email" &&
-    key !== "Phone Number" &&
-    row[key]
-  ) {
+  if (!excludeKeys.includes(key) && row[key]) {
     details += `<div><b>${key}:</b> ${row[key]}</div>`;
   }
 }
