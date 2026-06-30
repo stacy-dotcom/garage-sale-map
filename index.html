@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Northgate Neighborhood 35th Annual Garage Sale Map</title>
+  < title> 35th Annual Northgate Neighborhood Garage Sale Map</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -11,7 +11,6 @@
   <style>
     :root {
       --brand: #2563eb;
-      --bg: #f8fafc;
     }
 
     body {
@@ -19,6 +18,7 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
       display: flex;
       height: 100vh;
+      overflow: hidden;
     }
 
     /* SIDEBAR */
@@ -28,6 +28,7 @@
       border-right: 1px solid #ddd;
       display: flex;
       flex-direction: column;
+      z-index: 2;
     }
 
     #header {
@@ -99,34 +100,98 @@
     /* MAP */
     #map {
       flex: 1;
+      z-index: 1;
     }
+
+    /* TOGGLE BUTTON */
+    #toggleView {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 999;
+
+      background: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      font-size: 12px;
+    }
+
+    /* -------------------------
+       MOBILE APP STYLE
+    --------------------------*/
+    @media (max-width: 768px) {
+
+      body {
+        flex-direction: column;
+      }
+
+      #map {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 100vh;
+      }
+
+      #sidebar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+
+        width: 100%;
+        height: 45vh;
+
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -2px 20px rgba(0,0,0,0.15);
+
+        overflow: hidden;
+      }
+
+      #sidebar::before {
+        content: "";
+        width: 50px;
+        height: 5px;
+        background: #ccc;
+        border-radius: 10px;
+        display: block;
+        margin: 8px auto;
+      }
+
+      #results {
+        overflow-y: auto;
+      }
+    }
+
   </style>
 </head>
 
 <body>
+
+<button id="toggleView">Map / List</button>
 
 <div id="sidebar">
 
   <div id="header" style="display:flex; align-items:center; gap:10px;">
 
   <img src="https://torreyteamrealestate.com/wp-content/uploads/2019/01/cropped-TorreyTeam_Monogram_Black-1-1.jpg"
-       style="width:38px; height:38px; border-radius:8px;" />
+       style="width:40px; height:40px; border-radius:8px; object-fit:cover;" />
 
   <div>
-    <div style="font-size:18px; font-weight:700;">
-      Northgate Neighborhood Garage Sale
-    </div>
-    <div style="font-size:12px; color:#666;">
-      35th Annual Garage Sale • In Honor of Pete Torrey • 2026
-    </div>
+    <div id="title">Northgate Neighborhood Garage Sale Map</div>
+    <div id="subtitle">35th Annual Garage Sale • In Honor of Pete Torrey • 2026</div>
   </div>
 
 </div>
+
   <input id="search" placeholder="Search items (tools, furniture, toys...)" />
   <div id="results"></div>
 
   <div id="footer">
-    Powered by The Torrey Team DRE#01433553 • Leaflet + Google Sheets
+    Powered by The Torrey Team DRE#01433553 • Compass • Leaflet + Google Sheets
   </div>
 
 </div>
@@ -149,16 +214,14 @@ let allData = [];
 let markers = [];
 let markerMap = new Map();
 
-// CLEAR
+// CLEAR MARKERS
 function clearMarkers() {
   markers.forEach(m => map.removeLayer(m));
   markers = [];
   markerMap.clear();
 }
 
-// -----------------------------
-// SAFE CSV PARSER (FIXED)
-// -----------------------------
+// CSV PARSER (FIXED)
 function parseCSV(csv) {
   const lines = csv.trim().split("\n");
   const headers = lines[0].split(",").map(h => h.replace(/"/g, "").trim());
@@ -194,9 +257,7 @@ function parseCSV(csv) {
   return results;
 }
 
-// -----------------------------
-// MARKER CREATION (FIXED + BRANDED POPUP)
-// -----------------------------
+// MARKER
 function createMarker(row, index) {
 
   let lat = parseFloat(row.Latitude);
@@ -206,7 +267,6 @@ function createMarker(row, index) {
 
   let marker = L.marker([lat, lng]).addTo(map);
 
-  // ONLY show item fields
   let details = "";
 
   const exclude = [
@@ -227,21 +287,15 @@ function createMarker(row, index) {
 
   let popup = `
     <div style="font-size:14px; max-width:260px;">
-
       <b>${row.Address || "No address"}</b>
-
       <hr>
-
       ${details || "<i>No items listed</i>"}
-
       <hr>
-
       <a style="color:#2563eb; font-weight:600;"
          href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}"
          target="_blank">
         🧭 Get Directions
       </a>
-
     </div>
   `;
 
@@ -253,9 +307,7 @@ function createMarker(row, index) {
   return marker;
 }
 
-// -----------------------------
 // SEARCH
-// -----------------------------
 function searchData(term) {
   if (!term) return allData;
 
@@ -268,9 +320,7 @@ function searchData(term) {
   );
 }
 
-// -----------------------------
 // RENDER
-// -----------------------------
 function render(term = "") {
 
   let filtered = searchData(term);
@@ -306,9 +356,7 @@ function render(term = "") {
   });
 }
 
-// -----------------------------
 // LOAD DATA
-// -----------------------------
 async function loadData() {
   let res = await fetch(SHEET_URL + "&t=" + Date.now());
   let csv = await res.text();
@@ -320,15 +368,25 @@ async function loadData() {
   render(document.getElementById("search").value);
 }
 
-// SEARCH INPUT
+// SEARCH
 document.getElementById("search").addEventListener("input", (e) => {
   render(e.target.value);
 });
 
+// TOGGLE MOBILE VIEW
+let isOpen = true;
+
+document.getElementById("toggleView").onclick = () => {
+  const sidebar = document.getElementById("sidebar");
+
+  if (window.innerWidth <= 768) {
+    isOpen = !isOpen;
+    sidebar.style.height = isOpen ? "45vh" : "0vh";
+  }
+};
+
 // INIT
 loadData();
-
-// AUTO REFRESH
 setInterval(loadData, 30000);
 
 </script>
