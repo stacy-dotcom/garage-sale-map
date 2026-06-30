@@ -59,12 +59,8 @@
       user-select: none;
     }
 
-    .filters input {
-      margin-right: 5px;
-    }
-
     #map {
-      height: calc(100vh - 160px);
+      height: calc(100vh - 140px);
       width: 100%;
     }
   </style>
@@ -74,35 +70,7 @@
 
 <div id="topbar">
   <div class="title">📍 Walnut Creek Garage Sale Map (94598)</div>
-
-  <input id="search" placeholder="Search books, tools, patio, etc..." />
-
-  <div class="filters">
-    <label><input type="checkbox" class="cat" value="Electronics"> Electronics</label>
-    <label><input type="checkbox" class="cat" value="Indoor Furniture"> Indoor Furniture</label>
-    <label><input type="checkbox" class="cat" value="Patio Furniture"> Patio Furniture</label>
-    <label><input type="checkbox" class="cat" value="Sporting Equipment/Exercise Equipment"> Sporting</label>
-    <label><input type="checkbox" class="cat" value="Exercise Equipment/Weights etc."> Weights</label>
-    <label><input type="checkbox" class="cat" value="Baby Equipment"> Baby Equipment</label>
-    <label><input type="checkbox" class="cat" value="Baby clothes"> Baby Clothes</label>
-    <label><input type="checkbox" class="cat" value="Children Educational Toys/Games"> Kids Toys</label>
-    <label><input type="checkbox" class="cat" value="Children's Clothing"> Children's Clothing</label>
-    <label><input type="checkbox" class="cat" value="Adult Clothing"> Adult Clothing</label>
-    <label><input type="checkbox" class="cat" value="Musical Instruments"> Instruments</label>
-    <label><input type="checkbox" class="cat" value="Records/CDs"> Records/CDs</label>
-    <label><input type="checkbox" class="cat" value="Movies/DVDs etc."> Movies/DVDs</label>
-    <label><input type="checkbox" class="cat" value="Tools"> Tools</label>
-    <label><input type="checkbox" class="cat" value="Gardening"> Gardening</label>
-    <label><input type="checkbox" class="cat" value="Auto Parts"> Auto Parts</label>
-    <label><input type="checkbox" class="cat" value="Jewelry"> Jewelry</label>
-    <label><input type="checkbox" class="cat" value="Coins"> Coins</label>
-    <label><input type="checkbox" class="cat" value="Art/Frames"> Art/Frames</label>
-    <label><input type="checkbox" class="cat" value="Small Kitchen Appliances"> Kitchen</label>
-    <label><input type="checkbox" class="cat" value="BBQ/BBQ Accessories"> BBQ</label>
-    <label><input type="checkbox" class="cat" value="Books"> Books</label>
-    <label><input type="checkbox" class="cat" value="Pet Accessories/Crates etc."> Pets</label>
-    <label><input type="checkbox" class="cat" value="Lighting Fixtures"> Lighting</label>
-  </div>
+  <input id="search" placeholder="Search (romance books, tools, toys...)" />
 </div>
 
 <div id="map"></div>
@@ -120,21 +88,16 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let allData = [];
 let markers = [];
 
-function in94598(lat, lng) {
-  return (
-    lat >= 37.86 &&
-    lat <= 37.94 &&
-    lng >= -122.10 &&
-    lng <= -122.02
-  );
-}
+// store marker references for highlighting
+let markerIndex = [];
 
 function clearMarkers() {
   markers.forEach(m => map.removeLayer(m));
   markers = [];
+  markerIndex = [];
 }
 
-function addMarkers(data) {
+function addMarkers(data, highlightTerm = "") {
   clearMarkers();
 
   data.forEach(row => {
@@ -142,24 +105,42 @@ function addMarkers(data) {
     let lat = parseFloat(row.Latitude);
     let lng = parseFloat(row.Longitude);
 
-    // FIX: prevent silent drops
     if (isNaN(lat) || isNaN(lng)) return;
-    if (!in94598(lat, lng)) return;
 
-    // ONLY ADDRESS IN POPUP
+    let address = row.Address || "No address";
+
+    let isMatch = highlightTerm &&
+      address.toLowerCase().includes(highlightTerm.toLowerCase());
+
+    let marker = L.marker([lat, lng]);
+
+    // highlight matched pins
+    if (isMatch) {
+      marker.setOpacity(1);
+      marker.bindTooltip("MATCH", { permanent: false });
+
+      marker.setIcon(new L.Icon({
+        iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+        iconSize: [32, 32]
+      }));
+    } else {
+      marker.setOpacity(0.6);
+    }
+
     let popup = `
       <div style="font-size:14px;">
-        ${row.Address || "No address"}
-        <br><br>
+        ${address}<br><br>
         <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">
           Directions
         </a>
       </div>
     `;
 
-    let marker = L.marker([lat, lng]).addTo(map);
     marker.bindPopup(popup);
+
+    marker.addTo(map);
     markers.push(marker);
+    markerIndex.push({ marker, row });
   });
 }
 
@@ -199,39 +180,25 @@ function parseCSV(csv) {
   return results;
 }
 
-function matchesSearch(row, term) {
-  if (!term) return true;
+function searchData(term) {
+  if (!term) return allData;
 
   term = term.toLowerCase();
 
-  return Object.values(row).some(v => {
-    if (!v) return false;
-    return v.toString().toLowerCase().includes(term);
+  return allData.filter(row => {
+    return Object.values(row).some(v =>
+      v && v.toString().toLowerCase().includes(term)
+    );
   });
 }
 
-function applyFilters() {
-  let term = document.getElementById("search").value.toLowerCase();
+// MAIN SEARCH LOGIC (FIXED)
+function applySearch() {
+  let term = document.getElementById("search").value.trim();
 
-  let checked = Array.from(document.querySelectorAll(".cat:checked"))
-    .map(c => c.value);
+  let filtered = searchData(term);
 
-  let filtered = allData.filter(row => {
-
-    let matchesText = matchesSearch(row, term);
-
-    let matchesCat =
-      checked.length === 0 ||
-      checked.some(cat =>
-        String(row[cat]).trim().toUpperCase() === "TRUE"
-      );
-
-    return matchesText && matchesCat;
-  });
-
-  if (filtered.length === 0) filtered = allData;
-
-  addMarkers(filtered);
+  addMarkers(filtered, term);
 }
 
 async function loadData() {
@@ -240,20 +207,18 @@ async function loadData() {
 
   allData = parseCSV(csv);
 
-  console.log("Rows loaded:", allData.length);
+  console.log("Loaded rows:", allData.length);
 
   addMarkers(allData);
 }
 
 // EVENTS
-document.getElementById("search").addEventListener("input", applyFilters);
+document.getElementById("search").addEventListener("input", applySearch);
 
-document.querySelectorAll(".cat").forEach(c =>
-  c.addEventListener("change", applyFilters)
-);
-
-// INITIAL LOAD + AUTO REFRESH
+// INIT
 loadData();
+
+// auto refresh from Google Form
 setInterval(loadData, 30000);
 
 </script>
