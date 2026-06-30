@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Walnut Creek Garage Sale Map (94598)</title>
+  <title>Walnut Creek Garage Sale Map</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -12,65 +12,70 @@
     body {
       margin: 0;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      background: #f5f6f8;
+      display: flex;
+      height: 100vh;
     }
 
-    #topbar {
+    /* LEFT PANEL (ZILLOW STYLE) */
+    #sidebar {
+      width: 360px;
       background: white;
-      padding: 12px;
-      border-bottom: 1px solid #ddd;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-    }
-
-    .title {
-      font-weight: 600;
-      margin-bottom: 8px;
-      font-size: 16px;
+      border-right: 1px solid #ddd;
+      display: flex;
+      flex-direction: column;
     }
 
     #search {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
+      padding: 12px;
+      border: none;
+      border-bottom: 1px solid #ddd;
       font-size: 14px;
       outline: none;
     }
 
-    #search:focus {
-      border-color: #4a90e2;
+    #results {
+      overflow-y: auto;
+      flex: 1;
     }
 
-    .filters {
-      margin-top: 10px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .filters label {
-      background: #f0f2f5;
-      padding: 6px 10px;
-      border-radius: 20px;
-      font-size: 12px;
+    .card {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
       cursor: pointer;
-      user-select: none;
     }
 
+    .card:hover {
+      background: #f5f7fa;
+    }
+
+    .address {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    /* MAP SIDE */
     #map {
-      height: calc(100vh - 140px);
-      width: 100%;
+      flex: 1;
+    }
+
+    .highlight {
+      border-left: 4px solid #e11d48;
+      background: #fff5f5;
     }
   </style>
 </head>
 
 <body>
 
-<div id="topbar">
-  <div class="title">📍 Walnut Creek Garage Sale Map (94598)</div>
+<div id="sidebar">
   <input id="search" placeholder="Search (romance books, tools, toys...)" />
+  <div id="results"></div>
 </div>
 
 <div id="map"></div>
@@ -79,71 +84,101 @@
 
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVajdzKrksVrstLNnB6WvUYSWfawJuLSszIEbu4kH_kfBlyevUuPEIXgU-zdzgN5Vg3wbQNSvRZKZP/pub?gid=1475063241&single=true&output=csv";
 
+// MAP
 let map = L.map('map').setView([37.8986, -122.0618], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: 'OpenStreetMap'
 }).addTo(map);
 
+// DATA
 let allData = [];
 let markers = [];
+let markerMap = new Map();
 
-// store marker references for highlighting
-let markerIndex = [];
-
+// CLEAR MARKERS
 function clearMarkers() {
   markers.forEach(m => map.removeLayer(m));
   markers = [];
-  markerIndex = [];
+  markerMap.clear();
 }
 
-function addMarkers(data, highlightTerm = "") {
+// CREATE MARKER
+function createMarker(row, index) {
+  let lat = parseFloat(row.Latitude);
+  let lng = parseFloat(row.Longitude);
+
+  if (isNaN(lat) || isNaN(lng)) return null;
+
+  let marker = L.marker([lat, lng]).addTo(map);
+
+  let popup = `
+    <div style="font-size:14px;">
+      ${row.Address || "No address"}<br><br>
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">
+        Directions
+      </a>
+    </div>
+  `;
+
+  marker.bindPopup(popup);
+
+  markers.push(marker);
+  markerMap.set(index, marker);
+
+  return marker;
+}
+
+// SEARCH
+function searchData(term) {
+  if (!term) return allData;
+
+  term = term.toLowerCase();
+
+  return allData.filter(row =>
+    Object.values(row).some(v =>
+      v && v.toString().toLowerCase().includes(term)
+    )
+  );
+}
+
+// RENDER LIST + MAP (ZILLOW CORE)
+function render(term = "") {
+
+  let filtered = searchData(term);
+
   clearMarkers();
 
-  data.forEach(row => {
+  let resultsDiv = document.getElementById("results");
+  resultsDiv.innerHTML = "";
 
-    let lat = parseFloat(row.Latitude);
-    let lng = parseFloat(row.Longitude);
+  filtered.forEach((row, i) => {
 
-    if (isNaN(lat) || isNaN(lng)) return;
+    let marker = createMarker(row, i);
 
-    let address = row.Address || "No address";
+    let div = document.createElement("div");
+    div.className = "card";
 
-    let isMatch = highlightTerm &&
-      address.toLowerCase().includes(highlightTerm.toLowerCase());
-
-    let marker = L.marker([lat, lng]);
-
-    // highlight matched pins
-    if (isMatch) {
-      marker.setOpacity(1);
-      marker.bindTooltip("MATCH", { permanent: false });
-
-      marker.setIcon(new L.Icon({
-        iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-        iconSize: [32, 32]
-      }));
-    } else {
-      marker.setOpacity(0.6);
-    }
-
-    let popup = `
-      <div style="font-size:14px;">
-        ${address}<br><br>
-        <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">
-          Directions
-        </a>
-      </div>
+    div.innerHTML = `
+      <div class="address">${row.Address || "No address"}</div>
+      <div class="small">Tap to view on map</div>
     `;
 
-    marker.bindPopup(popup);
+    div.onclick = () => {
+      if (!marker) return;
 
-    marker.addTo(map);
-    markers.push(marker);
-    markerIndex.push({ marker, row });
+      map.setView(marker.getLatLng(), 17);
+      marker.openPopup();
+
+      document.querySelectorAll(".card").forEach(c => c.classList.remove("highlight"));
+      div.classList.add("highlight");
+    };
+
+    resultsDiv.appendChild(div);
   });
 }
 
+// PARSE CSV
 function parseCSV(csv) {
   const lines = csv.split("\n");
   const headers = lines[0].split(",").map(h => h.trim());
@@ -180,27 +215,7 @@ function parseCSV(csv) {
   return results;
 }
 
-function searchData(term) {
-  if (!term) return allData;
-
-  term = term.toLowerCase();
-
-  return allData.filter(row => {
-    return Object.values(row).some(v =>
-      v && v.toString().toLowerCase().includes(term)
-    );
-  });
-}
-
-// MAIN SEARCH LOGIC (FIXED)
-function applySearch() {
-  let term = document.getElementById("search").value.trim();
-
-  let filtered = searchData(term);
-
-  addMarkers(filtered, term);
-}
-
+// LOAD DATA
 async function loadData() {
   let res = await fetch(SHEET_URL + "&cache=" + Date.now());
   let csv = await res.text();
@@ -209,16 +224,18 @@ async function loadData() {
 
   console.log("Loaded rows:", allData.length);
 
-  addMarkers(allData);
+  render(document.getElementById("search").value);
 }
 
-// EVENTS
-document.getElementById("search").addEventListener("input", applySearch);
+// SEARCH INPUT
+document.getElementById("search").addEventListener("input", (e) => {
+  render(e.target.value);
+});
 
 // INIT
 loadData();
 
-// auto refresh from Google Form
+// AUTO REFRESH (Google Form updates)
 setInterval(loadData, 30000);
 
 </script>
