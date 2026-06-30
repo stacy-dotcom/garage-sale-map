@@ -112,14 +112,36 @@ function createMarker(row, index) {
 
   let marker = L.marker([lat, lng]).addTo(map);
 
-  let popup = `
-    <div style="font-size:14px;">
-      ${row.Address || "No address"}<br><br>
-      <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">
-        Directions
-      </a>
-    </div>
-  `;
+  let details = "";
+
+for (let key in row) {
+  if (
+    key !== "Address" &&
+    key !== "Latitude" &&
+    key !== "Longitude" &&
+    row[key]
+  ) {
+    details += `<div><b>${key}:</b> ${row[key]}</div>`;
+  }
+}
+
+let popup = `
+  <div style="font-size:14px; max-width:260px;">
+
+    <b>${row.Address || "No address"}</b>
+
+    <hr>
+
+    ${details || "<i>No item details listed</i>"}
+
+    <hr>
+
+    <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">
+      🧭 Directions
+    </a>
+
+  </div>
+`;
 
   marker.bindPopup(popup);
 
