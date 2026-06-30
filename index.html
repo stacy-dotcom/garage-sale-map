@@ -112,13 +112,15 @@ function createMarker(row, index) {
 
   let marker = L.marker([lat, lng]).addTo(map);
 
-  let details = "";
+ let details = "";
 
 for (let key in row) {
   if (
     key !== "Address" &&
     key !== "Latitude" &&
     key !== "Longitude" &&
+    key !== "Email" &&
+    key !== "Phone Number" &&
     row[key]
   ) {
     details += `<div><b>${key}:</b> ${row[key]}</div>`;
