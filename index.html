@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Northgate Neighborhood Garage Sale Map</title>
+ <title>Northgate Neighborhood Garage Sale Map</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -9,7 +9,9 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
-    :root { --brand: #2563eb; }
+    :root {
+      --brand: #2563eb;
+    }
 
     body {
       margin: 0;
@@ -19,12 +21,14 @@
       overflow: hidden;
     }
 
+    /* SIDEBAR */
     #sidebar {
       width: 360px;
       background: white;
       border-right: 1px solid #ddd;
       display: flex;
       flex-direction: column;
+      z-index: 2;
     }
 
     #header {
@@ -32,8 +36,16 @@
       border-bottom: 1px solid #eee;
     }
 
-    #title { font-size: 18px; font-weight: 700; }
-    #subtitle { font-size: 12px; color: #666; margin-top: 4px; }
+    #title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    #subtitle {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
 
     #search {
       padding: 12px;
@@ -43,7 +55,14 @@
       outline: none;
     }
 
-    #results { overflow-y: auto; flex: 1; }
+    #search:focus {
+      background: #eff6ff;
+    }
+
+    #results {
+      overflow-y: auto;
+      flex: 1;
+    }
 
     .card {
       padding: 12px;
@@ -51,43 +70,130 @@
       cursor: pointer;
     }
 
-    .card:hover { background: #f5f7fa; }
+    .card:hover {
+      background: #f5f7fa;
+    }
 
-    .address { font-size: 14px; font-weight: 500; }
-    .small { font-size: 12px; color: #666; }
+    .address {
+      font-size: 14px;
+      font-weight: 500;
+    }
 
-    #map { flex: 1; }
+    .small {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
 
+    .highlight {
+      border-left: 4px solid var(--brand);
+      background: #eff6ff;
+    }
+
+    #footer {
+      padding: 10px;
+      font-size: 11px;
+      color: #888;
+      border-top: 1px solid #eee;
+    }
+
+    /* MAP */
+    #map {
+      flex: 1;
+      z-index: 1;
+    }
+
+    /* TOGGLE BUTTON */
+    #toggleView {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 999;
+
+      background: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      font-size: 12px;
+    }
+
+    /* -------------------------
+       MOBILE APP STYLE
+    --------------------------*/
     @media (max-width: 768px) {
-      body { flex-direction: column; }
-      #sidebar {
-        position: absolute;
-        bottom: 0;
-        width: 100%;
-        height: 45vh;
-        border-radius: 16px 16px 0 0;
+
+      body {
+        flex-direction: column;
       }
+
       #map {
         position: absolute;
         top: 0;
+        left: 0;
+        right: 0;
         bottom: 0;
-        width: 100%;
         height: 100vh;
       }
+
+      #sidebar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+
+        width: 100%;
+        height: 45vh;
+
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -2px 20px rgba(0,0,0,0.15);
+
+        overflow: hidden;
+      }
+
+      #sidebar::before {
+        content: "";
+        width: 50px;
+        height: 5px;
+        background: #ccc;
+        border-radius: 10px;
+        display: block;
+        margin: 8px auto;
+      }
+
+      #results {
+        overflow-y: auto;
+      }
     }
+
   </style>
 </head>
 
 <body>
 
+<button id="toggleView">Map / List</button>
+
 <div id="sidebar">
-  <div id="header">
-    <div id="title">Northgate Garage Sale Map</div>
-    <div id="subtitle">2026 Neighborhood Event</div>
+
+  <div id="header" style="display:flex; align-items:center; gap:10px;">
+
+  <img src="https://torreyteamrealestate.com/wp-content/uploads/2019/01/cropped-TorreyTeam_Monogram_Black-1-1.jpg"
+       style="width:40px; height:40px; border-radius:8px; object-fit:cover;" />
+
+  <div>
+    <div id="title">Northgate Neighborhood Garage Sale Map</div>
+    <div id="subtitle">35th Annual Garage Sale • In Honor of Pete Torrey • 2026</div>
   </div>
 
-  <input id="search" placeholder="Search items..." />
+</div>
+
+  <input id="search" placeholder="Search items (tools, furniture, toys...)" />
   <div id="results"></div>
+
+  <div id="footer">
+    Powered by The Torrey Team DRE#01433553 • Compass • Leaflet + Google Sheets
+  </div>
+
 </div>
 
 <div id="map"></div>
@@ -107,139 +213,30 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // DATA
 let allData = [];
 let markers = [];
+let markerMap = new Map();
 
 // CLEAR MARKERS
 function clearMarkers() {
   markers.forEach(m => map.removeLayer(m));
   markers = [];
+  markerMap.clear();
 }
 
-// SIMPLE CSV PARSER
+// CSV PARSER (FIXED)
 function parseCSV(csv) {
   const lines = csv.trim().split("\n");
   const headers = lines[0].split(",").map(h => h.replace(/"/g, "").trim());
 
-  return lines.slice(1).map(line => {
-    let values = line.split(",");
-    let obj = {};
-    headers.forEach((h, i) => obj[h] = (values[i] || "").replace(/"/g, "").trim());
-    return obj;
-  });
-}
+  let results = [];
 
-// MARKERS
-function createMarker(row) {
-
-  const lat = parseFloat(row.Latitude);
-  const lng = parseFloat(row.Longitude);
-
-  if (isNaN(lat) || isNaN(lng)) return;
-
-  const marker = L.marker([lat, lng]).addTo(map);
-
-  marker.bindPopup(`
-    <b>${row.Address || "No address"}</b>
-    <br>
-    <a target="_blank"
-       href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}">
-      Directions
-    </a>
-  `);
-
-  markers.push(marker);
-}
-
-// RENDER
-function render(term = "") {
-
-  clearMarkers();
-
-  let filtered = allData.filter(r =>
-    Object.values(r).some(v =>
-      v && v.toLowerCase().includes(term.toLowerCase())
-    )
-  );
-
-  const results = document.getElementById("results");
-  results.innerHTML = "";
-
-  filtered.forEach(row => {
-
-    createMarker(row);
-
-    const div = document.createElement("div");
-    div.className = "card";
-
-    div.innerHTML = `
-      <div class="address">${row.Address || "No address"}</div>
-      <div class="small">Tap to view</div>
-    `;
-
-    div.onclick = () => {
-      const lat = parseFloat(row.Latitude);
-      const lng = parseFloat(row.Longitude);
-      if (!isNaN(lat)) map.setView([lat, lng], 17);
-    };
-
-    results.appendChild(div);
-  });
-}
-
-// LOAD DATA
-async function loadData() {
-  try {
-    const res = await fetch(SHEET_URL + "?t=" + Date.now());
-    const csv = await res.text();
-
-    allData = parseCSV(csv);
-
-    console.log("Loaded rows:", allData.length);
-
-    render(document.getElementById("search").value);
-
-  } catch (e) {
-    console.error("CSV load failed:", e);
-  }
-}
-
-// SEARCH
-document.getElementById("search").addEventListener("input", (e) => {
-  render(e.target.value);
-});
-
-// INITconst SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTQWdlA3FA_3Ea7lBmVTYHtRpnZdGWWeLWR3nR6kDYit9rLPKyUtokTx1ikLzrxmYFqL2cz9RWhHZZz/pub?gid=713749718&single=true&output=csv";
-
-// MAP
-let map = L.map('map').setView([37.8986, -122.0618], 13);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: 'OpenStreetMap'
-}).addTo(map);
-
-let allData = [];
-let markers = [];
-
-// CLEAR
-function clearMarkers() {
-  markers.forEach(m => map.removeLayer(m));
-  markers = [];
-}
-
-// FIXED CSV PARSER (handles commas + quotes)
-function parseCSV(text) {
-  const lines = text.split("\n").filter(l => l.trim());
-
-  const headers = lines[0]
-    .split(",")
-    .map(h => h.replace(/"/g, "").trim());
-
-  return lines.slice(1).map(line => {
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
 
     let values = [];
     let current = "";
     let insideQuotes = false;
 
-    for (let char of line) {
+    for (let char of lines[i]) {
       if (char === '"') insideQuotes = !insideQuotes;
       else if (char === "," && !insideQuotes) {
         values.push(current);
@@ -251,96 +248,147 @@ function parseCSV(text) {
     values.push(current);
 
     let obj = {};
-    headers.forEach((h, i) => {
-      obj[h] = (values[i] || "").replace(/"/g, "").trim();
+    headers.forEach((h, idx) => {
+      obj[h] = (values[idx] || "").replace(/"/g, "").trim();
     });
 
-    return obj;
-  });
+    results.push(obj);
+  }
+
+  return results;
 }
 
-// MARKERS
-function createMarker(row) {
+// MARKER
+function createMarker(row, index) {
 
-  const lat = parseFloat(row.Latitude);
-  const lng = parseFloat(row.Longitude);
+  let lat = parseFloat(row.Latitude);
+  let lng = parseFloat(row.Longitude);
 
-  if (!lat || !lng) return null;
+  if (isNaN(lat) || isNaN(lng)) return null;
 
-  const marker = L.marker([lat, lng]).addTo(map);
+  let marker = L.marker([lat, lng]).addTo(map);
 
-  marker.bindPopup(`
-    <b>${row.Address || "No address"}</b><br>
-    <a target="_blank"
-      href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}">
-      Directions
-    </a>
-  `);
+  let details = "";
+
+  const exclude = [
+    "Address",
+    "Latitude",
+    "Longitude",
+    "Email",
+    "Phone Number",
+    "Timestamp",
+    "Contact"
+  ];
+
+  for (let key in row) {
+    if (!exclude.includes(key) && row[key]) {
+      details += `<div><b>${key}:</b> ${row[key]}</div>`;
+    }
+  }
+
+  let popup = `
+    <div style="font-size:14px; max-width:260px;">
+      <b>${row.Address || "No address"}</b>
+      <hr>
+      ${details || "<i>No items listed</i>"}
+      <hr>
+      <a style="color:#2563eb; font-weight:600;"
+         href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}"
+         target="_blank">
+        🧭 Get Directions
+      </a>
+    </div>
+  `;
+
+  marker.bindPopup(popup);
 
   markers.push(marker);
+  markerMap.set(index, marker);
+
+  return marker;
+}
+
+// SEARCH
+function searchData(term) {
+  if (!term) return allData;
+
+  term = term.toLowerCase();
+
+  return allData.filter(row =>
+    Object.values(row).some(v =>
+      v && v.toString().toLowerCase().includes(term)
+    )
+  );
 }
 
 // RENDER
-function render(searchTerm = "") {
+function render(term = "") {
+
+  let filtered = searchData(term);
 
   clearMarkers();
 
-  const filtered = allData.filter(row =>
-    Object.values(row).some(v =>
-      v && v.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  let resultsDiv = document.getElementById("results");
+  resultsDiv.innerHTML = "";
 
-  const results = document.getElementById("results");
-  results.innerHTML = "";
+  filtered.forEach((row, i) => {
 
-  filtered.forEach(row => {
+    let marker = createMarker(row, i);
 
-    createMarker(row);
-
-    const div = document.createElement("div");
+    let div = document.createElement("div");
     div.className = "card";
 
     div.innerHTML = `
-      <div class="address">${row.Address || ""}</div>
+      <div class="address">${row.Address || "No address"}</div>
       <div class="small">Tap to view on map</div>
     `;
 
     div.onclick = () => {
-      const lat = parseFloat(row.Latitude);
-      const lng = parseFloat(row.Longitude);
-      if (lat && lng) map.setView([lat, lng], 17);
+      if (!marker) return;
+
+      map.setView(marker.getLatLng(), 17);
+      marker.openPopup();
+
+      document.querySelectorAll(".card").forEach(c => c.classList.remove("highlight"));
+      div.classList.add("highlight");
     };
 
-    results.appendChild(div);
+    resultsDiv.appendChild(div);
   });
 }
 
-// LOAD
+// LOAD DATA
 async function loadData() {
-  try {
-    const res = await fetch(SHEET_URL + "?t=" + Date.now());
-    const csv = await res.text();
+  let res = await fetch(
+  SHEET_URL + (SHEET_URL.includes("?") ? "&" : "?") + "t=" + Date.now()
+);
+  let csv = await res.text();
 
-    allData = parseCSV(csv);
+  allData = parseCSV(csv);
 
-    console.log("Rows loaded:", allData.length);
+  console.log("Loaded rows:", allData.length);
 
-    render(document.getElementById("search").value);
-
-  } catch (e) {
-    console.error("Load failed:", e);
-  }
+  render(document.getElementById("search").value);
 }
 
 // SEARCH
-document.getElementById("search").addEventListener("input", e => {
+document.getElementById("search").addEventListener("input", (e) => {
   render(e.target.value);
 });
 
+// TOGGLE MOBILE VIEW
+let isOpen = true;
+
+document.getElementById("toggleView").onclick = () => {
+  const sidebar = document.getElementById("sidebar");
+
+  if (window.innerWidth <= 768) {
+    isOpen = !isOpen;
+    sidebar.style.height = isOpen ? "45vh" : "0vh";
+  }
+};
+
 // INIT
-loadData();
-setInterval(loadData, 30000);
 loadData();
 setInterval(loadData, 30000);
 
