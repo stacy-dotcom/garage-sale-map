@@ -200,7 +200,52 @@
 
 <script>
 
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS1w5xotITu_ecTpI1fiDoYrfBtuezjb7e2sDuJz8FwxYYURl_XSjn1L58LRENsrZf-uyD9vxezK4v4/pub?gid=1604756894&single=true&output=csv";
+const SHEET_URL = "function updateLatLngMissing() {
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Form Responses 1");
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+
+  const headers = sheet.getRange(1, 1, 1, lastCol)
+    .getValues()[0]
+    .map(h => h.toString().trim());
+
+  const addressCol = headers.indexOf("Address") + 1;
+  const cityCol = headers.indexOf("City") + 1;
+  const zipCol = headers.indexOf("Zip") + 1;
+  const latCol = headers.indexOf("Latitude") + 1;
+  const lngCol = headers.indexOf("Longitude") + 1;
+
+  for (let row = 2; row <= lastRow; row++) {
+
+    const lat = sheet.getRange(row, latCol).getValue();
+    const lng = sheet.getRange(row, lngCol).getValue();
+
+    if (lat && lng) continue;
+
+    const address = sheet.getRange(row, addressCol).getValue();
+    const city = sheet.getRange(row, cityCol).getValue();
+    const zip = sheet.getRange(row, zipCol).getValue();
+
+    if (!address) continue;
+
+    const query = `${address}, ${city}, CA ${zip}`;
+
+    try {
+      const geo = Maps.newGeocoder().geocode(query);
+
+      if (!geo.results || geo.results.length === 0) continue;
+
+      const loc = geo.results[0].geometry.location;
+
+      sheet.getRange(row, latCol).setValue(loc.lat);
+      sheet.getRange(row, lngCol).setValue(loc.lng);
+
+    } catch (e) {
+      console.log("Geocode failed:", query, e);
+    }
+  }
+}";
 
 // MAP
 let map = L.map('map').setView([37.8986, -122.0618], 13);
