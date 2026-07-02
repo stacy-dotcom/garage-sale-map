@@ -403,7 +403,9 @@ function render(term = "") {
 
 // LOAD DATA
 async function loadData() {
-  let res = await fetch(SHEET_URL + "&t=" + Date.now());
+  let res = await fetch(
+  SHEET_URL + (SHEET_URL.includes("?") ? "&" : "?") + "t=" + Date.now()
+);
   let csv = await res.text();
 
   allData = parseCSV(csv);
