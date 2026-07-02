@@ -202,7 +202,7 @@
 
 const SHEET_URL =
 "https://docs.google.com/spreadsheets/d/e/2PACX-1vTQWdlA3FA_3Ea7lBmVTYHtRpnZdGWWeLWR3nR6kDYit9rLPKyUtokTx1ikLzrxmYFqL2cz9RWhHZZz/pub?gid=1760857167&single=true&output=csv";
-
+const INCLUDE_COL = "Include in Map";
 // MAP
 let map = L.map('map').setView([37.8986, -122.0618], 13);
 
@@ -310,11 +310,15 @@ function createMarker(row, index) {
 
 // SEARCH
 function searchData(term) {
-  if (!term) return allData;
+  let base = allData.filter(row =>
+    row[INCLUDE_COL]?.toString().toUpperCase() === "YES"
+  );
+
+  if (!term) return base;
 
   term = term.toLowerCase();
 
-  return allData.filter(row =>
+  return base.filter(row =>
     Object.values(row).some(v =>
       v && v.toString().toLowerCase().includes(term)
     )
