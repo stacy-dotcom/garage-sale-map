@@ -271,15 +271,15 @@ function createMarker(row, index) {
   let details = "";
 
   const exclude = [
-    "Address",
-    "Latitude",
-    "Longitude",
-    "Email",
-    "Phone Number",
-    "Timestamp",
-    "Contact"
-  
-  ];
+  "Address",
+  "Latitude",
+  "Longitude",
+  "Email",
+  "Phone Number",
+  "Timestamp",
+  "Contact",
+  "Include in Map"
+];
 
   for (let key in row) {
     if (!exclude.includes(key) && row[key]) {
