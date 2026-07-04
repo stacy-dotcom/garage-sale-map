@@ -292,9 +292,7 @@ function parseCSV(csv) {
 }
 
 // MARKER
-function createMarker(row, index) {
-
- async function createMarker(row, index) {
+async function createMarker(row, index) {
 
   let lat = parseFloat(row.Latitude);
   let lng = parseFloat(row.Longitude);
@@ -314,15 +312,15 @@ function createMarker(row, index) {
   let details = "";
 
   const exclude = [
-  "Address",
-  "Latitude",
-  "Longitude",
-  "Email",
-  "Phone Number",
-  "Timestamp",
-  "Contact",
-  "Include in Map"
-];
+    "Address",
+    "Latitude",
+    "Longitude",
+    "Email",
+    "Phone Number",
+    "Timestamp",
+    "Contact",
+    "Include in Map"
+  ];
 
   for (let key in row) {
     if (!exclude.includes(key) && row[key]) {
@@ -370,7 +368,7 @@ function searchData(term) {
 }
 
 // RENDER
-function render(term = "") {
+async function render(term = "") {
   let filtered = searchData(term);
 
   clearMarkers();
@@ -378,10 +376,10 @@ function render(term = "") {
   let resultsDiv = document.getElementById("results");
   resultsDiv.innerHTML = "";
 
-  filtered.forEach((row, i) => {
+  for (let i = 0; i < filtered.length; i++) {
+  const row = filtered[i];
 
     let marker = await createMarker(row, i);
-
     let div = document.createElement("div");
     div.className = "card";
 
