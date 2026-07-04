@@ -261,22 +261,27 @@ function parseCSV(csv) {
 }
 
 // CHECK IF INCLUDED
-function isIncluded(row) {
-  return (row[INCLUDE_COL] || "").toString().trim().toUpperCase() === "YES";
-}
-
-// CREATE MARKER
 function createMarker(row, index) {
 
-  let lat = parseFloat(row.Latitude);
-  let lng = parseFloat(row.Longitude);
+  // --- INCLUDE FILTER (must be YES exactly) ---
+  const include = (row["Include in Map"] || "").toString().trim().toUpperCase();
 
-  // 👇 ADD IT RIGHT HERE
-  console.log("ROW:", row.Address, "LAT:", row.Latitude, "LNG:", row.Longitude);
+  if (include !== "YES") return null;
 
-  if (isNaN(lat) || isNaN(lng)) return null;
+  // --- LAT / LNG SAFE PARSING ---
+  let lat = Number(String(row.Latitude || "").trim());
+  let lng = Number(String(row.Longitude || "").trim());
 
+  // DEBUG (keep this for now until everything works)
+  console.log("Row:", row.Address, "| LAT:", row.Latitude, "| LNG:", row.Longitude, "| INCLUDE:", include);
+
+  // --- VALIDATE COORDINATES ---
+  if (!isFinite(lat) || !isFinite(lng)) return null;
+
+  // --- CREATE MARKER ---
   let marker = L.marker([lat, lng]).addTo(map);
+
+  // --- BUILD DETAILS (exclude system columns) ---
   let details = "";
 
   const exclude = [
@@ -287,9 +292,7 @@ function createMarker(row, index) {
     "Phone Number",
     "Timestamp",
     "Contact",
-    "Include in Map",
-    "City",
-    "Zip"
+    "Include in Map"
   ];
 
   for (let key in row) {
@@ -301,6 +304,7 @@ function createMarker(row, index) {
     details += `<div><b>${key}:</b> ${value}</div>`;
   }
 
+  // --- POPUP ---
   let popup = `
     <div style="font-size:14px; max-width:260px;">
 
@@ -313,8 +317,8 @@ function createMarker(row, index) {
       <hr>
 
       <a style="color:#2563eb; font-weight:600;"
-         href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}"
-         target="_blank">
+         target="_blank"
+         href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}">
         🧭 Get Directions
       </a>
 
@@ -324,8 +328,6 @@ function createMarker(row, index) {
   marker.bindPopup(popup);
 
   markers.push(marker);
-  markerMap.set(index, marker);
-
   return marker;
 }
 
