@@ -215,12 +215,13 @@ let allData = [];
 let markers = [];
 let markerMap = new Map();
 
+const INCLUDE_COL = "Include in Map";
 // CLEAR MARKERS
 function clearMarkers() {
   markers.forEach(m => map.removeLayer(m));
   markers = [];
   markerMap.clear();
- const INCLUDE_COL = "Include in Map";
+
 }
 
 // CSV PARSER (FIXED)
@@ -278,7 +279,8 @@ function createMarker(row, index) {
     "Email",
     "Phone Number",
     "Timestamp",
-    "Contact"
+    "Contact",
+   "Include in Map"
   ];
 
   for (let key in row) {
