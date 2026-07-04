@@ -214,6 +214,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let allData = [];
 let markers = [];
 let markerMap = new Map();
+ const INCLUDE_COL = "Include in Map";
 
 // CLEAR MARKERS
 function clearMarkers() {
@@ -311,11 +312,18 @@ function createMarker(row, index) {
 
 // SEARCH
 function searchData(term) {
-  if (!term) return allData;
+
+  // FIRST: filter by Include in Map
+  let base = allData.filter(row =>
+    (row[INCLUDE_COL] || "").toString().trim().toUpperCase() === "YES"
+  );
+
+  // if no search term, return filtered base
+  if (!term) return base;
 
   term = term.toLowerCase();
 
-  return allData.filter(row =>
+  return base.filter(row =>
     Object.values(row).some(v =>
       v && v.toString().toLowerCase().includes(term)
     )
