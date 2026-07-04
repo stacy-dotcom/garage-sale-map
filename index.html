@@ -271,11 +271,10 @@ function createMarker(row, index) {
   let lat = parseFloat(row.Latitude);
   let lng = parseFloat(row.Longitude);
 
-  // DEBUG (this is key)
-  if (isNaN(lat) || isNaN(lng)) {
-    console.log("Skipping bad row:", row.Address, row.Latitude, row.Longitude);
-    return null;
-  }
+  // 👇 ADD IT RIGHT HERE
+  console.log("ROW:", row.Address, "LAT:", row.Latitude, "LNG:", row.Longitude);
+
+  if (isNaN(lat) || isNaN(lng)) return null;
 
   let marker = L.marker([lat, lng]).addTo(map);
   let details = "";
