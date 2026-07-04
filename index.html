@@ -200,8 +200,10 @@
 
 <script>
 
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTQWdlA3FA_3Ea7lBmVTYHtRpnZdGWWeLWR3nR6kDYit9rLPKyUtokTx1ikLzrxmYFqL2cz9RWhHZZz/pub?gid=1760857167&single=true&output=csv";
+const SHEET_URL =
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vTQWdlA3FA_3Ea7lBmVTYHtRpnZdGWWeLWR3nR6kDYit9rLPKyUtokTx1ikLzrxmYFqL2cz9RWhHZZz/pub?gid=713749718&single=true&output=csv";
 
+// MAP
 let map = L.map('map').setView([37.8986, -122.0618], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -211,20 +213,16 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // DATA
 let allData = [];
 let markers = [];
-
-// COLUMN NAMES (must match Google Sheet exactly)
-const INCLUDE_COL = "Include in Map";
-const LAT_COL = "Latitude";
-const LNG_COL = "Longitude";
-const ADDRESS_COL = "Address";
+let markerMap = new Map();
 
 // CLEAR MARKERS
 function clearMarkers() {
   markers.forEach(m => map.removeLayer(m));
   markers = [];
+  markerMap.clear();
 }
 
-// CSV PARSER
+// CSV PARSER (FIXED)
 function parseCSV(csv) {
   const lines = csv.trim().split("\n");
   const headers = lines[0].split(",").map(h => h.replace(/"/g, "").trim());
@@ -260,28 +258,22 @@ function parseCSV(csv) {
   return results;
 }
 
-// CHECK IF INCLUDED
+// MARKER
 function createMarker(row, index) {
 
-  // --- INCLUDE FILTER (must be YES exactly) ---
-  const include = (row["Include in Map"] || "").toString().trim().toUpperCase();
-
+  // ---------- INCLUDE FILTER (SAFE) ----------
+  const include = (row[INCLUDE_COL] || "").toString().trim().toUpperCase();
   if (include !== "YES") return null;
 
-  // --- LAT / LNG SAFE PARSING ---
-  let lat = Number(String(row.Latitude || "").trim());
-  let lng = Number(String(row.Longitude || "").trim());
+  // ---------- COORDINATES ----------
+  let lat = parseFloat(row.Latitude);
+  let lng = parseFloat(row.Longitude);
 
-  // DEBUG (keep this for now until everything works)
-  console.log("Row:", row.Address, "| LAT:", row.Latitude, "| LNG:", row.Longitude, "| INCLUDE:", include);
-
-  // --- VALIDATE COORDINATES ---
   if (!isFinite(lat) || !isFinite(lng)) return null;
 
-  // --- CREATE MARKER ---
   let marker = L.marker([lat, lng]).addTo(map);
 
-  // --- BUILD DETAILS (exclude system columns) ---
+  // ---------- DETAILS ----------
   let details = "";
 
   const exclude = [
@@ -296,80 +288,80 @@ function createMarker(row, index) {
   ];
 
   for (let key in row) {
-    const value = row[key];
-
     if (exclude.includes(key)) continue;
-    if (!value || value.toString().trim() === "") continue;
 
-    details += `<div><b>${key}:</b> ${value}</div>`;
+    const val = row[key];
+    if (!val) continue;
+
+    details += `<div><b>${key}:</b> ${val}</div>`;
   }
 
-  // --- POPUP ---
+  // ---------- POPUP ----------
   let popup = `
     <div style="font-size:14px; max-width:260px;">
-
       <b>${row.Address || "No address"}</b>
-
       <hr>
-
       ${details || "<i>No items listed</i>"}
-
       <hr>
-
       <a style="color:#2563eb; font-weight:600;"
          target="_blank"
          href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}">
         🧭 Get Directions
       </a>
-
     </div>
   `;
 
   marker.bindPopup(popup);
 
   markers.push(marker);
+  markerMap.set(index, marker);
+
   return marker;
+}
+
+// SEARCH
+function searchData(term) {
+  if (!term) return allData;
+
+  term = term.toLowerCase();
+
+  return allData.filter(row =>
+    Object.values(row).some(v =>
+      v && v.toString().toLowerCase().includes(term)
+    )
+  );
 }
 
 // RENDER
 function render(term = "") {
 
+  let filtered = searchData(term);
+
+  clearMarkers();
+
   let resultsDiv = document.getElementById("results");
   resultsDiv.innerHTML = "";
 
-  // STEP 1: ONLY INCLUDED ROWS
-  let filtered = allData.filter(row => isIncluded(row));
+  filtered.forEach((row, i) => {
 
-  // STEP 2: SEARCH FILTER
-  if (term) {
-    term = term.toLowerCase();
-    filtered = filtered.filter(row =>
-      Object.values(row).some(v =>
-        v && v.toString().toLowerCase().includes(term)
-      )
-    );
-  }
-
-  // STEP 3: CLEAR MAP
-  clearMarkers();
-
-  // STEP 4: BUILD MAP + LIST
-  filtered.forEach(row => {
-
-    let marker = createMarker(row);
+    let marker = createMarker(row, i);
 
     let div = document.createElement("div");
     div.className = "card";
 
     div.innerHTML = `
-      <div class="address">${row.Address || ""}</div>
+      <div class="address">${row.Address || "No address"}</div>
       <div class="small">Tap to view on map</div>
     `;
 
     div.onclick = () => {
       if (!marker) return;
+
       map.setView(marker.getLatLng(), 17);
       marker.openPopup();
+
+      document.querySelectorAll(".card").forEach(c => c.classList.remove("highlight"));
+      div.classList.add("highlight");
     };
 
     resultsDiv.appendChild(div);
@@ -378,18 +370,14 @@ function render(term = "") {
 
 // LOAD DATA
 async function loadData() {
-  let res = await fetch(SHEET_URL + "&t=" + Date.now());
-
-  console.log("STATUS:", res.status);
-  console.log("CONTENT-TYPE:", res.headers.get("content-type"));
-
+  let res = await fetch(
+  SHEET_URL + (SHEET_URL.includes("?") ? "&" : "?") + "t=" + Date.now()
+);
   let csv = await res.text();
-
-  console.log("RAW START:", csv.slice(0, 200));
 
   allData = parseCSV(csv);
 
-  console.log("PARSED ROWS:", allData.length);
+  console.log("Loaded rows:", allData.length);
 
   render(document.getElementById("search").value);
 }
@@ -398,6 +386,18 @@ async function loadData() {
 document.getElementById("search").addEventListener("input", (e) => {
   render(e.target.value);
 });
+
+// TOGGLE MOBILE VIEW
+let isOpen = true;
+
+document.getElementById("toggleView").onclick = () => {
+  const sidebar = document.getElementById("sidebar");
+
+  if (window.innerWidth <= 768) {
+    isOpen = !isOpen;
+    sidebar.style.height = isOpen ? "45vh" : "0vh";
+  }
+};
 
 // INIT
 loadData();
