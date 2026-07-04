@@ -200,10 +200,8 @@
 
 <script>
 
-const SHEET_URL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vTQWdlA3FA_3Ea7lBmVTYHtRpnZdGWWeLWR3nR6kDYit9rLPKyUtokTx1ikLzrxmYFqL2cz9RWhHZZz/pub?gid=713749718&single=true&output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTQWdlA3FA_3Ea7lBmVTYHtRpnZdGWWeLWR3nR6kDYit9rLPKyUtokTx1ikLzrxmYFqL2cz9RWhHZZz/pub?gid=1760857167&single=true&output=csv";
 
-// MAP
 let map = L.map('map').setView([37.8986, -122.0618], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -213,18 +211,20 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // DATA
 let allData = [];
 let markers = [];
-let markerMap = new Map();
 
+// COLUMN NAMES (must match Google Sheet exactly)
 const INCLUDE_COL = "Include in Map";
+const LAT_COL = "Latitude";
+const LNG_COL = "Longitude";
+const ADDRESS_COL = "Address";
+
 // CLEAR MARKERS
 function clearMarkers() {
   markers.forEach(m => map.removeLayer(m));
   markers = [];
-  markerMap.clear();
-
 }
 
-// CSV PARSER (FIXED)
+// CSV PARSER
 function parseCSV(csv) {
   const lines = csv.trim().split("\n");
   const headers = lines[0].split(",").map(h => h.replace(/"/g, "").trim());
@@ -260,100 +260,74 @@ function parseCSV(csv) {
   return results;
 }
 
-// MARKER
-function createMarker(row, index) {
+// CHECK IF INCLUDED
+function isIncluded(row) {
+  return (row[INCLUDE_COL] || "").toString().trim().toUpperCase() === "YES";
+}
 
-  let lat = parseFloat(row.Latitude);
-  let lng = parseFloat(row.Longitude);
+// CREATE MARKER
+function createMarker(row) {
+
+  let lat = parseFloat(row[LAT_COL]);
+  let lng = parseFloat(row[LNG_COL]);
 
   if (isNaN(lat) || isNaN(lng)) return null;
 
   let marker = L.marker([lat, lng]).addTo(map);
 
-  let details = "";
-
-  const exclude = [
-    "Address",
-    "Latitude",
-    "Longitude",
-    "Email",
-    "Phone Number",
-    "Timestamp",
-    "Contact",
-   "Include in Map"
-  ];
-
-  for (let key in row) {
-    if (!exclude.includes(key) && row[key]) {
-      details += `<div><b>${key}:</b> ${row[key]}</div>`;
-    }
-  }
-
-  let popup = `
-    <div style="font-size:14px; max-width:260px;">
-      <b>${row.Address || "No address"}</b>
-      <hr>
-      ${details || "<i>No items listed</i>"}
-      <hr>
-      <a style="color:#2563eb; font-weight:600;"
-         href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}"
-         target="_blank">
-        🧭 Get Directions
+  marker.bindPopup(`
+    <div style="font-size:14px;">
+      <b>${row[ADDRESS_COL] || "No address"}</b><br><br>
+      <a target="_blank"
+        href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}">
+        🧭 Directions
       </a>
     </div>
-  `;
-
-  marker.bindPopup(popup);
+  `);
 
   markers.push(marker);
-  markerMap.set(index, marker);
-
   return marker;
-}
-
-// SEARCH
-function searchData(term) {
-  if (!term) return allData;
-
-  term = term.toLowerCase();
-
-  return allData.filter(row =>
-    Object.values(row).some(v =>
-      v && v.toString().toLowerCase().includes(term)
-    )
-  );
 }
 
 // RENDER
 function render(term = "") {
 
-  let filtered = searchData(term);
-
-  clearMarkers();
-
   let resultsDiv = document.getElementById("results");
   resultsDiv.innerHTML = "";
 
-  filtered.forEach((row, i) => {
+  // STEP 1: ONLY INCLUDED ROWS
+  let filtered = allData.filter(row => isIncluded(row));
 
-    let marker = createMarker(row, i);
+  // STEP 2: SEARCH FILTER
+  if (term) {
+    term = term.toLowerCase();
+    filtered = filtered.filter(row =>
+      Object.values(row).some(v =>
+        v && v.toString().toLowerCase().includes(term)
+      )
+    );
+  }
+
+  // STEP 3: CLEAR MAP
+  clearMarkers();
+
+  // STEP 4: BUILD MAP + LIST
+  filtered.forEach(row => {
+
+    let marker = createMarker(row);
 
     let div = document.createElement("div");
     div.className = "card";
 
     div.innerHTML = `
-      <div class="address">${row.Address || "No address"}</div>
+      <div class="address">${row.Address || ""}</div>
       <div class="small">Tap to view on map</div>
     `;
 
     div.onclick = () => {
       if (!marker) return;
-
       map.setView(marker.getLatLng(), 17);
       marker.openPopup();
-
-      document.querySelectorAll(".card").forEach(c => c.classList.remove("highlight"));
-      div.classList.add("highlight");
     };
 
     resultsDiv.appendChild(div);
@@ -362,34 +336,25 @@ function render(term = "") {
 
 // LOAD DATA
 async function loadData() {
-  let res = await fetch(
-  SHEET_URL + (SHEET_URL.includes("?") ? "&" : "?") + "t=" + Date.now()
-);
-  let csv = await res.text();
+  try {
+    const res = await fetch(SHEET_URL + "&t=" + Date.now());
+    const csv = await res.text();
 
-  allData = parseCSV(csv);
+    allData = parseCSV(csv);
 
-  console.log("Loaded rows:", allData.length);
+    console.log("Loaded rows:", allData.length);
 
-  render(document.getElementById("search").value);
+    render(document.getElementById("search").value);
+
+  } catch (e) {
+    console.error("Sheet load failed:", e);
+  }
 }
 
 // SEARCH
 document.getElementById("search").addEventListener("input", (e) => {
   render(e.target.value);
 });
-
-// TOGGLE MOBILE VIEW
-let isOpen = true;
-
-document.getElementById("toggleView").onclick = () => {
-  const sidebar = document.getElementById("sidebar");
-
-  if (window.innerWidth <= 768) {
-    isOpen = !isOpen;
-    sidebar.style.height = isOpen ? "45vh" : "0vh";
-  }
-};
 
 // INIT
 loadData();
