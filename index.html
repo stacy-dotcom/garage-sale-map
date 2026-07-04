@@ -266,26 +266,64 @@ function isIncluded(row) {
 }
 
 // CREATE MARKER
-function createMarker(row) {
+function createMarker(row, index) {
 
-  let lat = parseFloat(row[LAT_COL]);
-  let lng = parseFloat(row[LNG_COL]);
+  let lat = parseFloat(row.Latitude);
+  let lng = parseFloat(row.Longitude);
 
   if (isNaN(lat) || isNaN(lng)) return null;
 
   let marker = L.marker([lat, lng]).addTo(map);
 
-  marker.bindPopup(`
-    <div style="font-size:14px;">
-      <b>${row[ADDRESS_COL] || "No address"}</b><br><br>
-      <a target="_blank"
-        href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}">
-        🧭 Directions
+  let details = "";
+
+  const exclude = [
+    "Address",
+    "Latitude",
+    "Longitude",
+    "Email",
+    "Phone Number",
+    "Timestamp",
+    "Contact",
+    "Include in Map",
+    "City",
+    "Zip"
+  ];
+
+  for (let key in row) {
+    const value = row[key];
+
+    if (exclude.includes(key)) continue;
+    if (!value || value.toString().trim() === "") continue;
+
+    details += `<div><b>${key}:</b> ${value}</div>`;
+  }
+
+  let popup = `
+    <div style="font-size:14px; max-width:260px;">
+
+      <b>${row.Address || "No address"}</b>
+
+      <hr>
+
+      ${details || "<i>No items listed</i>"}
+
+      <hr>
+
+      <a style="color:#2563eb; font-weight:600;"
+         href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}"
+         target="_blank">
+        🧭 Get Directions
       </a>
+
     </div>
-  `);
+  `;
+
+  marker.bindPopup(popup);
 
   markers.push(marker);
+  markerMap.set(index, marker);
+
   return marker;
 }
 
