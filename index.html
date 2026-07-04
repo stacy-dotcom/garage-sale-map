@@ -200,62 +200,30 @@
 
 <script>
 
- const geoCache = new Map();
+<script>
+
+const geoCache = new Map();
+
 const SHEET_URL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vTQWdlA3FA_3Ea7lBmVTYHtRpnZdGWWeLWR3nR6kDYit9rLPKyUtokTx1ikLzrxmYFqL2cz9RWhHZZz/pub?gid=1760857167&single=true&output=csv";
-const INCLUDE_COL = "Include in Map";
-// MAP
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vTQWdlA3FA_3Ea7lBmVTYHtRpnZdGWWeLWR3nR6kDYit9rLPKyUtokTx1ikLzrxmYFqL2cz9RWhHZZz/pub?gid=713749718&single=true&output=csv";
+
 let map = L.map('map').setView([37.8986, -122.0618], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: 'OpenStreetMap'
 }).addTo(map);
 
-// DATA
 let allData = [];
 let markers = [];
 let markerMap = new Map();
-async function geocode(address) {
 
-  if (!address) return null;
-
-  const key = address.trim().toLowerCase();
-
-  if (geoCache.has(key)) return geoCache.get(key);
-
-  const query = `${address}, Walnut Creek, CA 94598`;
-
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
-
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (!data || data.length === 0) return null;
-
-    const result = {
-      lat: parseFloat(data[0].lat),
-      lng: parseFloat(data[0].lon)
-    };
-
-    geoCache.set(key, result);
-
-    return result;
-
-  } catch (e) {
-    console.log("Geocode failed:", address);
-    return null;
-  }
-}
- 
-// CLEAR MARKERS
 function clearMarkers() {
   markers.forEach(m => map.removeLayer(m));
   markers = [];
   markerMap.clear();
 }
 
-// CSV PARSER (FIXED)
+// SAFE CSV PARSER (unchanged)
 function parseCSV(csv) {
   const lines = csv.trim().split("\n");
   const headers = lines[0].split(",").map(h => h.replace(/"/g, "").trim());
@@ -291,20 +259,20 @@ function parseCSV(csv) {
   return results;
 }
 
-// MARKER
-async function createMarker(row, index) {
+// OPTIONAL SAFE GEOCODER (ONLY IF lat/lng missing)
+function geocodeSyncFallback(address) {
+  // ⚠️ We DO NOT use async in rendering
+  // This is disabled fallback to prevent crashes
+  return null;
+}
+
+// MARKER (RESTORED SAFE VERSION)
+function createMarker(row, index) {
 
   let lat = parseFloat(row.Latitude);
   let lng = parseFloat(row.Longitude);
 
-  if (isNaN(lat) || isNaN(lng)) {
-    const geo = await geocode(row.Address);
-    if (!geo) return null;
-
-    lat = geo.lat;
-    lng = geo.lng;
-  }
-
+  // ❌ no geocoding here (prevents crashes)
   if (isNaN(lat) || isNaN(lng)) return null;
 
   let marker = L.marker([lat, lng]).addTo(map);
@@ -318,8 +286,7 @@ async function createMarker(row, index) {
     "Email",
     "Phone Number",
     "Timestamp",
-    "Contact",
-    "Include in Map"
+    "Contact"
   ];
 
   for (let key in row) {
@@ -352,23 +319,20 @@ async function createMarker(row, index) {
 
 // SEARCH
 function searchData(term) {
-  let base = allData.filter(row =>
-    row[INCLUDE_COL]?.toString().toUpperCase() === "YES"
-  );
-
-  if (!term) return base;
+  if (!term) return allData;
 
   term = term.toLowerCase();
 
-  return base.filter(row =>
+  return allData.filter(row =>
     Object.values(row).some(v =>
       v && v.toString().toLowerCase().includes(term)
     )
   );
 }
 
-// RENDER
-async function render(term = "") {
+// RENDER (SAFE - NO async, NO await)
+function render(term = "") {
+
   let filtered = searchData(term);
 
   clearMarkers();
@@ -376,10 +340,10 @@ async function render(term = "") {
   let resultsDiv = document.getElementById("results");
   resultsDiv.innerHTML = "";
 
-  for (let i = 0; i < filtered.length; i++) {
-  const row = filtered[i];
+  filtered.forEach((row, i) => {
 
-    let marker = await createMarker(row, i);
+    let marker = createMarker(row, i);
+
     let div = document.createElement("div");
     div.className = "card";
 
@@ -405,8 +369,9 @@ async function render(term = "") {
 // LOAD DATA
 async function loadData() {
   let res = await fetch(
-  SHEET_URL + (SHEET_URL.includes("?") ? "&" : "?") + "t=" + Date.now()
-);
+    SHEET_URL + (SHEET_URL.includes("?") ? "&" : "?") + "t=" + Date.now()
+  );
+
   let csv = await res.text();
 
   allData = parseCSV(csv);
@@ -416,7 +381,7 @@ async function loadData() {
   render(document.getElementById("search").value);
 }
 
-// SEARCH
+// SEARCH INPUT
 document.getElementById("search").addEventListener("input", (e) => {
   render(e.target.value);
 });
@@ -436,6 +401,8 @@ document.getElementById("toggleView").onclick = () => {
 // INIT
 loadData();
 setInterval(loadData, 30000);
+
+</script>
 
 </script>
 
