@@ -383,6 +383,9 @@ async function loadData() {
     const csv = await res.text();
 
     allData = parseCSV(csv);
+   console.log("RAW CSV START:", csv.slice(0, 300));
+console.log("PARSED ROW COUNT:", allData.length);
+console.log("FIRST ROW OBJECT:", allData[0]);
 
     console.log("Loaded rows:", allData.length);
 
