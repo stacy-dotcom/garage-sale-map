@@ -200,30 +200,29 @@
 
 <script>
 
-<script>
-
-const geoCache = new Map();
-
 const SHEET_URL =
 "https://docs.google.com/spreadsheets/d/e/2PACX-1vTQWdlA3FA_3Ea7lBmVTYHtRpnZdGWWeLWR3nR6kDYit9rLPKyUtokTx1ikLzrxmYFqL2cz9RWhHZZz/pub?gid=713749718&single=true&output=csv";
 
+// MAP
 let map = L.map('map').setView([37.8986, -122.0618], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: 'OpenStreetMap'
 }).addTo(map);
 
+// DATA
 let allData = [];
 let markers = [];
 let markerMap = new Map();
 
+// CLEAR MARKERS
 function clearMarkers() {
   markers.forEach(m => map.removeLayer(m));
   markers = [];
   markerMap.clear();
 }
 
-// SAFE CSV PARSER (unchanged)
+// CSV PARSER (FIXED)
 function parseCSV(csv) {
   const lines = csv.trim().split("\n");
   const headers = lines[0].split(",").map(h => h.replace(/"/g, "").trim());
@@ -259,20 +258,12 @@ function parseCSV(csv) {
   return results;
 }
 
-// OPTIONAL SAFE GEOCODER (ONLY IF lat/lng missing)
-function geocodeSyncFallback(address) {
-  // ⚠️ We DO NOT use async in rendering
-  // This is disabled fallback to prevent crashes
-  return null;
-}
-
-// MARKER (RESTORED SAFE VERSION)
+// MARKER
 function createMarker(row, index) {
 
   let lat = parseFloat(row.Latitude);
   let lng = parseFloat(row.Longitude);
 
-  // ❌ no geocoding here (prevents crashes)
   if (isNaN(lat) || isNaN(lng)) return null;
 
   let marker = L.marker([lat, lng]).addTo(map);
@@ -330,7 +321,7 @@ function searchData(term) {
   );
 }
 
-// RENDER (SAFE - NO async, NO await)
+// RENDER
 function render(term = "") {
 
   let filtered = searchData(term);
@@ -369,9 +360,8 @@ function render(term = "") {
 // LOAD DATA
 async function loadData() {
   let res = await fetch(
-    SHEET_URL + (SHEET_URL.includes("?") ? "&" : "?") + "t=" + Date.now()
-  );
-
+  SHEET_URL + (SHEET_URL.includes("?") ? "&" : "?") + "t=" + Date.now()
+);
   let csv = await res.text();
 
   allData = parseCSV(csv);
@@ -381,7 +371,7 @@ async function loadData() {
   render(document.getElementById("search").value);
 }
 
-// SEARCH INPUT
+// SEARCH
 document.getElementById("search").addEventListener("input", (e) => {
   render(e.target.value);
 });
@@ -401,8 +391,6 @@ document.getElementById("toggleView").onclick = () => {
 // INIT
 loadData();
 setInterval(loadData, 30000);
-
-</script>
 
 </script>
 
