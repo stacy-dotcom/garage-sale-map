@@ -200,6 +200,7 @@
 
 <script>
 
+ const geoCache = new Map();
 const SHEET_URL =
 "https://docs.google.com/spreadsheets/d/e/2PACX-1vTQWdlA3FA_3Ea7lBmVTYHtRpnZdGWWeLWR3nR6kDYit9rLPKyUtokTx1ikLzrxmYFqL2cz9RWhHZZz/pub?gid=1760857167&single=true&output=csv";
 const INCLUDE_COL = "Include in Map";
@@ -214,7 +215,39 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let allData = [];
 let markers = [];
 let markerMap = new Map();
+async function geocode(address) {
 
+  if (!address) return null;
+
+  const key = address.trim().toLowerCase();
+
+  if (geoCache.has(key)) return geoCache.get(key);
+
+  const query = `${address}, Walnut Creek, CA 94598`;
+
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data || data.length === 0) return null;
+
+    const result = {
+      lat: parseFloat(data[0].lat),
+      lng: parseFloat(data[0].lon)
+    };
+
+    geoCache.set(key, result);
+
+    return result;
+
+  } catch (e) {
+    console.log("Geocode failed:", address);
+    return null;
+  }
+}
+ 
 // CLEAR MARKERS
 function clearMarkers() {
   markers.forEach(m => map.removeLayer(m));
@@ -261,8 +294,18 @@ function parseCSV(csv) {
 // MARKER
 function createMarker(row, index) {
 
+ async function createMarker(row, index) {
+
   let lat = parseFloat(row.Latitude);
   let lng = parseFloat(row.Longitude);
+
+  if (isNaN(lat) || isNaN(lng)) {
+    const geo = await geocode(row.Address);
+    if (!geo) return null;
+
+    lat = geo.lat;
+    lng = geo.lng;
+  }
 
   if (isNaN(lat) || isNaN(lng)) return null;
 
@@ -328,7 +371,6 @@ function searchData(term) {
 
 // RENDER
 function render(term = "") {
-
   let filtered = searchData(term);
 
   clearMarkers();
@@ -338,7 +380,7 @@ function render(term = "") {
 
   filtered.forEach((row, i) => {
 
-    let marker = createMarker(row, i);
+    let marker = await createMarker(row, i);
 
     let div = document.createElement("div");
     div.className = "card";
