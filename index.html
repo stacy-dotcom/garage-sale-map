@@ -378,19 +378,20 @@ function render(term = "") {
 
 // LOAD DATA
 async function loadData() {
-  try {
-    const res = await fetch(SHEET_URL + "&t=" + Date.now());
-    const csv = await res.text();
+  let res = await fetch(SHEET_URL + "&t=" + Date.now());
 
-    allData = parseCSV(csv);
-   
-    console.log("Loaded rows:", allData.length);
+  console.log("STATUS:", res.status);
+  console.log("CONTENT-TYPE:", res.headers.get("content-type"));
 
-    render(document.getElementById("search").value);
+  let csv = await res.text();
 
-  } catch (e) {
-    console.error("Sheet load failed:", e);
-  }
+  console.log("RAW START:", csv.slice(0, 200));
+
+  allData = parseCSV(csv);
+
+  console.log("PARSED ROWS:", allData.length);
+
+  render(document.getElementById("search").value);
 }
 
 // SEARCH
