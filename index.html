@@ -201,7 +201,7 @@
 <script>
 
 const SHEET_URL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vTQWdlA3FA_3Ea7lBmVTYHtRpnZdGWWeLWR3nR6kDYit9rLPKyUtokTx1ikLzrxmYFqL2cz9RWhHZZz/pub?gid=1760857167&single=true&output=csv";
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vTQWdlA3FA_3Ea7lBmVTYHtRpnZdGWWeLWR3nR6kDYit9rLPKyUtokTx1ikLzrxmYFqL2cz9RWhHZZz/pub?gid=713749718&single=true&output=csv";
 
 // MAP
 let map = L.map('map').setView([37.8986, -122.0618], 13);
@@ -261,19 +261,13 @@ function parseCSV(csv) {
 // MARKER
 function createMarker(row, index) {
 
-  // ---------- INCLUDE FILTER (SAFE) ----------
-  const include = (row[INCLUDE_COL] || "").toString().trim().toUpperCase();
-  if (include !== "YES") return null;
-
-  // ---------- COORDINATES ----------
   let lat = parseFloat(row.Latitude);
   let lng = parseFloat(row.Longitude);
 
-  if (!isFinite(lat) || !isFinite(lng)) return null;
+  if (isNaN(lat) || isNaN(lng)) return null;
 
   let marker = L.marker([lat, lng]).addTo(map);
 
-  // ---------- DETAILS ----------
   let details = "";
 
   const exclude = [
@@ -283,20 +277,15 @@ function createMarker(row, index) {
     "Email",
     "Phone Number",
     "Timestamp",
-    "Contact",
-    "Include in Map"
+    "Contact"
   ];
 
   for (let key in row) {
-    if (exclude.includes(key)) continue;
-
-    const val = row[key];
-    if (!val) continue;
-
-    details += `<div><b>${key}:</b> ${val}</div>`;
+    if (!exclude.includes(key) && row[key]) {
+      details += `<div><b>${key}:</b> ${row[key]}</div>`;
+    }
   }
 
-  // ---------- POPUP ----------
   let popup = `
     <div style="font-size:14px; max-width:260px;">
       <b>${row.Address || "No address"}</b>
@@ -304,8 +293,8 @@ function createMarker(row, index) {
       ${details || "<i>No items listed</i>"}
       <hr>
       <a style="color:#2563eb; font-weight:600;"
-         target="_blank"
-         href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}">
+         href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}"
+         target="_blank">
         🧭 Get Directions
       </a>
     </div>
