@@ -325,27 +325,20 @@ function searchData(term) {
 
     return Object.keys(row).some(key => {
       const value = (row[key] || "").toString().toLowerCase();
-
       const columnName = key.toLowerCase();
 
-      const isChecked =
-        value === "yes" ||
-        value === "true" ||
-        value === "1";
+      // PRIMARY: match actual data in the cell
+      const matchesValue = value.includes(termLower);
 
-      // ONLY match column name if it's actually checked
+      // OPTIONAL: match column name only if value is NOT empty
       const matchesColumn =
-        columnName.includes(termLower) && isChecked;
+        value !== "" && columnName.includes(termLower);
 
-      const matchesValue =
-        value.includes(termLower);
-
-      return matchesColumn || matchesValue;
+      return matchesValue || matchesColumn;
     });
 
   });
 }
-
 // RENDER
 function render(term = "") {
 
