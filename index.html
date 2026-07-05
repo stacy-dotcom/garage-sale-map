@@ -313,31 +313,36 @@ function createMarker(row, index) {
 // SEARCH
 function searchData(term) {
 
-  // 1. FIRST: only keep rows marked "YES" in Include in Map
   let base = allData.filter(row =>
-    (row[INCLUDE_COL] || "")
-      .toString()
-      .trim()
-      .toUpperCase() === "YES"
+    (row[INCLUDE_COL] || "").toString().trim().toUpperCase() === "YES"
   );
 
-  // 2. If no search term, just return filtered base
   if (!term) return base;
 
   const termLower = term.toLowerCase().trim();
 
-  // 3. Search BOTH column names + values
   return base.filter(row => {
-    return Object.keys(row).some(key => {
 
-      const columnName = key.toLowerCase();
+    return Object.keys(row).some(key => {
       const value = (row[key] || "").toString().toLowerCase();
 
-      return (
-        columnName.includes(termLower) ||  // matches "patio furniture"
-        value.includes(termLower)          // matches cell values
-      );
+      const columnName = key.toLowerCase();
+
+      const isChecked =
+        value === "yes" ||
+        value === "true" ||
+        value === "1";
+
+      // ONLY match column name if it's actually checked
+      const matchesColumn =
+        columnName.includes(termLower) && isChecked;
+
+      const matchesValue =
+        value.includes(termLower);
+
+      return matchesColumn || matchesValue;
     });
+
   });
 }
 
