@@ -374,7 +374,22 @@ function render(term = "") {
     resultsDiv.appendChild(div);
   });
 }
+function getBaseData() {
+  return allData.filter(row => {
 
+    const include =
+      (row["Include in Map"] || "")
+        .toString()
+        .trim()
+        .toUpperCase() === "YES";
+
+    const hasLocation =
+      (row.Latitude && row.Longitude) ||
+      (row.Address && row.Address.trim() !== "");
+
+    return include && hasLocation;
+  });
+}
 // LOAD DATA
 async function loadData() {
   let res = await fetch(
@@ -385,13 +400,15 @@ async function loadData() {
   allData = parseCSV(csv);
 
   console.log("Loaded rows:", allData.length);
+const baseData = getBaseData();
 
-  render(document.getElementById("search").value);
+  render(document.getElementById("search").value, baseData);
 }
 
 // SEARCH
 document.getElementById("search").addEventListener("input", (e) => {
-  render(e.target.value);
+  const baseData = getBaseData();
+  render(e.target.value, baseData);
 });
 
 // TOGGLE MOBILE VIEW
