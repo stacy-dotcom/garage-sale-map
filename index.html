@@ -313,21 +313,32 @@ function createMarker(row, index) {
 // SEARCH
 function searchData(term) {
 
-  // FIRST: filter by Include in Map
+  // 1. FIRST: only keep rows marked "YES" in Include in Map
   let base = allData.filter(row =>
-    (row[INCLUDE_COL] || "").toString().trim().toUpperCase() === "YES"
+    (row[INCLUDE_COL] || "")
+      .toString()
+      .trim()
+      .toUpperCase() === "YES"
   );
 
-  // if no search term, return filtered base
+  // 2. If no search term, just return filtered base
   if (!term) return base;
 
-  term = term.toLowerCase();
+  const termLower = term.toLowerCase().trim();
 
-  return base.filter(row =>
-    Object.values(row).some(v =>
-      v && v.toString().toLowerCase().includes(term)
-    )
-  );
+  // 3. Search BOTH column names + values
+  return base.filter(row => {
+    return Object.keys(row).some(key => {
+
+      const columnName = key.toLowerCase();
+      const value = (row[key] || "").toString().toLowerCase();
+
+      return (
+        columnName.includes(termLower) ||  // matches "patio furniture"
+        value.includes(termLower)          // matches cell values
+      );
+    });
+  });
 }
 
 // RENDER
