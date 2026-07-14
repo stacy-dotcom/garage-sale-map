@@ -192,6 +192,10 @@
 
   <div id="footer">
     Powered by The Torrey Team DRE#01433553 • Compass • Leaflet + Google Sheets
+   Due to the popularity and nature of this event, last-minute additions and cancellations are to be expected. We apologize for any inconvenience!
+This event is being promoted and advertised by The Torrey Team and Compass. 
+Neither The Torrey Team nor Compass are benefiting financially from this garage sale event.
+
   </div>
 
 </div>
@@ -268,7 +272,7 @@ function createMarker(row, index) {
   if (isNaN(lat) || isNaN(lng)) return null;
 
   let marker = L.marker([lat, lng]).addTo(map);
-
+console.log(row);
   let details = "";
 
   const exclude = [
