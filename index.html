@@ -272,7 +272,8 @@ function createMarker(row, index) {
   if (isNaN(lat) || isNaN(lng)) return null;
 
   let marker = L.marker([lat, lng]).addTo(map);
-console.log(row);
+console.log("Loaded rows:", rows.length);
+console.log("TEST - I AM HERE");
 console.table(rows.slice(0,5));
   let details = "";
 
