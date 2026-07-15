@@ -359,9 +359,23 @@ function searchData(term) {
   });
 }
 // RENDER
+// RENDER
 function render(term = "") {
 
   let filtered = searchData(term);
+
+  // Sort sidebar alphabetically by street name (ignore house numbers)
+  filtered.sort((a, b) => {
+    const streetA = (a.Address || "")
+      .replace(/^\d+\s*/, "")
+      .toLowerCase();
+
+    const streetB = (b.Address || "")
+      .replace(/^\d+\s*/, "")
+      .toLowerCase();
+
+    return streetA.localeCompare(streetB);
+  });
 
   clearMarkers();
 
@@ -369,10 +383,7 @@ function render(term = "") {
   resultsDiv.innerHTML = "";
 
   filtered.forEach((row, i) => {
-if (markers.length > 0) {
-  let group = new L.featureGroup(markers);
-  map.fitBounds(group.getBounds());
-}
+
     let marker = createMarker(row, i);
 
     let div = document.createElement("div");
@@ -389,28 +400,22 @@ if (markers.length > 0) {
       map.setView(marker.getLatLng(), 17);
       marker.openPopup();
 
-      document.querySelectorAll(".card").forEach(c => c.classList.remove("highlight"));
+      document.querySelectorAll(".card").forEach(c => 
+        c.classList.remove("highlight")
+      );
+
       div.classList.add("highlight");
     };
 
     resultsDiv.appendChild(div);
+
   });
-}
-function getBaseData() {
-  return allData.filter(row => {
 
-    const include =
-      (row["Include in Map"] || "")
-        .toString()
-        .trim()
-        .toUpperCase() === "YES";
-
-    const hasLocation =
-      (row.Latitude && row.Longitude) ||
-      (row.Address && row.Address.trim() !== "");
-
-    return include && hasLocation;
-  });
+  // Zoom map to show all pins after markers are created
+  if (markers.length > 0) {
+    let group = new L.featureGroup(markers);
+    map.fitBounds(group.getBounds());
+  }
 }
 // LOAD DATA
 async function loadData() {
