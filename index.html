@@ -267,14 +267,17 @@ function parseCSV(csv) {
 function createMarker(row, index) {
 
   let lat = parseFloat(row.Latitude);
-  let lng = parseFloat(row.Longitude);
+let lng = parseFloat(row.Longitude);
 
-  if (isNaN(lat) || isNaN(lng)) return null;
+console.log("Checking pin:", row.Address, lat, lng, row["Include in Map"]);
 
-  let marker = L.marker([lat, lng]).addTo(map);
-console.log("Loaded rows:", rows.length);
-console.log("TEST - I AM HERE");
-console.table(rows.slice(0,5));
+if (isNaN(lat) || isNaN(lng)) {
+  console.log("❌ Missing coordinates:", row.Address);
+  return null;
+}
+
+let marker = L.marker([lat, lng]).addTo(map);
+
   let details = "";
 
   const exclude = [
