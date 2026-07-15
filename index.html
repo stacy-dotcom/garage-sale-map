@@ -369,7 +369,10 @@ function render(term = "") {
   resultsDiv.innerHTML = "";
 
   filtered.forEach((row, i) => {
-
+if (markers.length > 0) {
+  let group = new L.featureGroup(markers);
+  map.fitBounds(group.getBounds());
+}
     let marker = createMarker(row, i);
 
     let div = document.createElement("div");
