@@ -359,63 +359,77 @@ function searchData(term) {
   });
 }
 // RENDER
-// RENDER
 function render(term = "") {
 
   let filtered = searchData(term);
-
-  // Sort by street name (ignores house numbers)
-  filtered.sort((a, b) => {
-    const streetA = (a.Address || "")
-      .replace(/^\d+\s*/, "")
-      .toLowerCase();
-
-    const streetB = (b.Address || "")
-      .replace(/^\d+\s*/, "")
-      .toLowerCase();
-
-    return streetA.localeCompare(streetB);
-  });
 
   clearMarkers();
 
   let resultsDiv = document.getElementById("results");
   resultsDiv.innerHTML = "";
 
+
   filtered.forEach((row, i) => {
 
     let marker = createMarker(row, i);
 
+
     let div = document.createElement("div");
+
     div.className = "card";
 
+
     div.innerHTML = `
-      <div class="address">${row.Address || "No address"}</div>
-      <div class="small">Tap to view on map</div>
+      <div class="address">
+        ${row.Address || "No address"}
+      </div>
+
+      <div class="small">
+        Tap to view on map
+      </div>
     `;
 
+
     div.onclick = () => {
+
       if (!marker) return;
 
-      map.setView(marker.getLatLng(), 17);
+
+      map.setView(
+        marker.getLatLng(),
+        17
+      );
+
+
       marker.openPopup();
 
-      document.querySelectorAll(".card").forEach(c => {
-        c.classList.remove("highlight");
-      });
+
+      document
+        .querySelectorAll(".card")
+        .forEach(c => c.classList.remove("highlight"));
+
 
       div.classList.add("highlight");
+
     };
+
 
     resultsDiv.appendChild(div);
 
   });
 
-  // Zoom map to all markers
+
+  // Zoom map AFTER all markers are created
   if (markers.length > 0) {
-    let group = L.featureGroup(markers);
-    map.fitBounds(group.getBounds());
+
+    let group = new L.featureGroup(markers);
+
+    map.fitBounds(
+      group.getBounds()
+    );
+
   }
+
 }
 // LOAD DATA
 async function loadData() {
