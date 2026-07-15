@@ -273,8 +273,7 @@ function createMarker(row, index) {
 
   let marker = L.marker([lat, lng]).addTo(map);
 console.log(row);
- console.log("First row:", rows[0]);
-console.log("Headers:", Object.keys(rows[0]));
+console.table(rows.slice(0,5));
   let details = "";
 
   const exclude = [
