@@ -437,23 +437,30 @@ function render(term = "") {
 }
 // LOAD DATA
 async function loadData() {
+
   let res = await fetch(
-  SHEET_URL + (SHEET_URL.includes("?") ? "&" : "?") + "t=" + Date.now()
-);
+    SHEET_URL +
+    (SHEET_URL.includes("?") ? "&" : "?") +
+    "t=" + Date.now()
+  );
+
   let csv = await res.text();
 
   allData = parseCSV(csv);
 
   console.log("Loaded rows:", allData.length);
-const baseData = getBaseData();
 
-  render(document.getElementById("search").value, baseData);
+  render(document.getElementById("search").value);
+
 }
 
+
 // SEARCH
-document.getElementById("search").addEventListener("input", (e) => {
-  const baseData = getBaseData();
-  render(e.target.value, baseData);
+document.getElementById("search")
+.addEventListener("input", (e) => {
+
+  render(e.target.value);
+
 });
 
 // TOGGLE MOBILE VIEW
