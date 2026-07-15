@@ -229,38 +229,48 @@ function clearMarkers() {
 
 // CSV PARSER (FIXED)
 function parseCSV(csv) {
-  const lines = csv.trim().split("\n");
-  const headers = lines[0].split(",").map(h => h.replace(/"/g, "").trim());
+  const rows = [];
+  let row = [];
+  let current = "";
+  let insideQuotes = false;
 
-  let results = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-
-    let values = [];
-    let current = "";
-    let insideQuotes = false;
-
-    for (let char of lines[i]) {
-      if (char === '"') insideQuotes = !insideQuotes;
-      else if (char === "," && !insideQuotes) {
-        values.push(current);
-        current = "";
-      } else {
-        current += char;
-      }
+  for (let char of csv) {
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } 
+    else if (char === "," && !insideQuotes) {
+      row.push(current.trim());
+      current = "";
+    } 
+    else if (char === "\n" && !insideQuotes) {
+      row.push(current.trim());
+      rows.push(row);
+      row = [];
+      current = "";
+    } 
+    else {
+      current += char;
     }
-    values.push(current);
-
-    let obj = {};
-    headers.forEach((h, idx) => {
-      obj[h] = (values[idx] || "").replace(/"/g, "").trim();
-    });
-
-    results.push(obj);
   }
 
-  return results;
+  if (current || row.length) {
+    row.push(current.trim());
+    rows.push(row);
+  }
+
+  const headers = rows[0].map(h => h.replace(/^"|"$/g, "").trim());
+
+  return rows.slice(1).map(values => {
+    let obj = {};
+
+    headers.forEach((header, i) => {
+      obj[header] = (values[i] || "")
+        .replace(/^"|"$/g, "")
+        .trim();
+    });
+
+    return obj;
+  });
 }
 
 // MARKER
