@@ -363,6 +363,22 @@ function render(term = "") {
 
   let filtered = searchData(term);
 
+  // Sort alphabetically by street name (ignores house numbers)
+  filtered.sort((a, b) => {
+
+    let streetA = (a.Address || "")
+      .replace(/^\d+\s*/, "")
+      .toLowerCase();
+
+    let streetB = (b.Address || "")
+      .replace(/^\d+\s*/, "")
+      .toLowerCase();
+
+    return streetA.localeCompare(streetB);
+
+  });
+
+
   clearMarkers();
 
   let resultsDiv = document.getElementById("results");
@@ -380,13 +396,8 @@ function render(term = "") {
 
 
     div.innerHTML = `
-      <div class="address">
-        ${row.Address || "No address"}
-      </div>
-
-      <div class="small">
-        Tap to view on map
-      </div>
+      <div class="address">${row.Address || "No address"}</div>
+      <div class="small">Tap to view on map</div>
     `;
 
 
@@ -394,12 +405,7 @@ function render(term = "") {
 
       if (!marker) return;
 
-
-      map.setView(
-        marker.getLatLng(),
-        17
-      );
-
+      map.setView(marker.getLatLng(), 17);
 
       marker.openPopup();
 
@@ -419,14 +425,12 @@ function render(term = "") {
   });
 
 
-  // Zoom map AFTER all markers are created
+  // Keep your original zoom behavior
   if (markers.length > 0) {
 
     let group = new L.featureGroup(markers);
 
-    map.fitBounds(
-      group.getBounds()
-    );
+    map.fitBounds(group.getBounds());
 
   }
 
