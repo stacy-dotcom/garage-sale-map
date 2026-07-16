@@ -121,50 +121,141 @@
     /* -------------------------
        MOBILE APP STYLE
     --------------------------*/
-    @media (max-width: 768px) {
+   /* -------------------------
+   MOBILE APP STYLE
+--------------------------*/
+@media (max-width: 768px) {
 
-      body {
-        flex-direction: column;
-      }
+  body {
+    flex-direction: column;
+  }
 
-      #map {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 100vh;
-      }
 
-      #sidebar {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
+  /* MAP */
+  #map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 45vh;
+  }
 
-        width: 100%;
-        height: 45vh;
 
-        border-radius: 16px 16px 0 0;
-        box-shadow: 0 -2px 20px rgba(0,0,0,0.15);
+  /* BOTTOM LIST PANEL */
+  #sidebar {
 
-        overflow: hidden;
-      }
+    position: absolute;
 
-      #sidebar::before {
-        content: "";
-        width: 50px;
-        height: 5px;
-        background: #ccc;
-        border-radius: 10px;
-        display: block;
-        margin: 8px auto;
-      }
+    bottom: 0;
+    left: 0;
+    right: 0;
 
-      #results {
-        overflow-y: auto;
-      }
-    }
+    width: 100%;
+
+    height: 55vh;
+
+    border-radius: 16px 16px 0 0;
+
+    box-shadow: 0 -2px 20px rgba(0,0,0,0.15);
+
+    overflow: hidden;
+
+    display: flex;
+
+    flex-direction: column;
+  }
+
+
+  /* LITTLE HANDLE */
+  #sidebar::before {
+
+    content: "";
+
+    width: 50px;
+
+    height: 5px;
+
+    background: #ccc;
+
+    border-radius: 10px;
+
+    display: block;
+
+    margin: 8px auto;
+
+    flex-shrink: 0;
+  }
+
+
+  /* KEEP HEADER AND SEARCH FROM SHRINKING */
+  #header,
+  #search {
+
+    flex-shrink: 0;
+
+  }
+
+
+  /* ADDRESS LIST */
+  #results {
+
+    flex: 1;
+
+    overflow-y: auto;
+
+    padding: 5px;
+
+    -webkit-overflow-scrolling: touch;
+
+  }
+
+
+  /* BIGGER ADDRESS TAP TARGETS */
+  .card {
+
+    padding: 14px;
+
+    margin: 6px 4px;
+
+    border: 1px solid #eee;
+
+    border-radius: 10px;
+
+  }
+
+
+  .address {
+
+    font-size: 17px;
+
+  }
+
+
+  .small {
+
+    font-size: 14px;
+
+  }
+
+
+  /* KEEP FOOTER */
+  #footer {
+
+    flex-shrink: 0;
+
+    font-size: 10px;
+
+    line-height: 1.3;
+
+    padding: 8px;
+
+    max-height: 75px;
+
+    overflow-y: auto;
+
+  }
+
+}
 
   </style>
 </head>
