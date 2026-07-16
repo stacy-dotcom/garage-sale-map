@@ -391,7 +391,7 @@ let marker = L.marker([lat, lng]).addTo(map);
     "Contact",
    "Include in Map"
   ];
-
+console.log(row);
   for (let key in row) {
     if (!exclude.includes(key) && row[key]) {
       details += `<div><b>${key}:</b> ${row[key]}</div>`;
