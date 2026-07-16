@@ -529,7 +529,8 @@ if (markers.length > 0 && !map.hasLoadedOnce) {
 }
 // LOAD DATA
 async function loadData() {
-
+let currentCenter = map.getCenter();
+let currentZoom = map.getZoom();
   let res = await fetch(
     SHEET_URL +
     (SHEET_URL.includes("?") ? "&" : "?") +
@@ -549,7 +550,11 @@ console.log("NEW DATA SAMPLE:", newData[0]);
   if (oldVersion !== newVersion) {
     allData = newData;
     render(document.getElementById("search").value);
-  }
+
+// restore user's map view
+map.setView(currentCenter, currentZoom);
+
+}
 
 }
 
