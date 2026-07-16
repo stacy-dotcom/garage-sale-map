@@ -538,14 +538,20 @@ async function loadData() {
 
   let csv = await res.text();
 
-  allData = parseCSV(csv);
+  let newData = parseCSV(csv);
 
-  console.log("Loaded rows:", allData.length);
+  console.log("Loaded rows:", newData.length);
 
-  render(document.getElementById("search").value);
+  // Check if sheet data changed
+  let oldVersion = JSON.stringify(allData);
+  let newVersion = JSON.stringify(newData);
+
+  if (oldVersion !== newVersion) {
+    allData = newData;
+    render(document.getElementById("search").value);
+  }
 
 }
-
 
 // SEARCH
 document.getElementById("search")
