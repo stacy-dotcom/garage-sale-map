@@ -539,7 +539,7 @@ async function loadData() {
   let csv = await res.text();
 
   let newData = parseCSV(csv);
-console.log(newData[0]);
+console.log("NEW DATA SAMPLE:", newData[0]);
   console.log("Loaded rows:", newData.length);
 
   // Check if sheet data changed
