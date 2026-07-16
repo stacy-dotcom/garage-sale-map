@@ -516,14 +516,14 @@ function render(term = "") {
   });
 
 
-  // Keep your original zoom behavior
-  if (markers.length > 0) {
+  // Only zoom to all pins on the initial map load
+if (markers.length > 0 && !map.hasLoadedOnce) {
 
-    let group = new L.featureGroup(markers);
+  let group = new L.featureGroup(markers);
 
-    map.fitBounds(group.getBounds());
+  map.fitBounds(group.getBounds());
 
-  }
+  map.hasLoadedOnce = true;
 
 }
 // LOAD DATA
